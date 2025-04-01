@@ -1,13 +1,17 @@
 import "./App.css";
 import "leaflet/dist/leaflet.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { Icon } from "leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { GoogleOAuthProvider, GoogleLogin, googleLogout } from "@react-oauth/google";
+import {
+  GoogleOAuthProvider,
+  GoogleLogin,
+  googleLogout,
+} from "@react-oauth/google";
 
 const API_URL = "http://localhost:3001";
 
@@ -48,8 +52,6 @@ const GPSMarker = ({ setUserPosition }) => {
   ) : null;
 };
 
-
-
 const ReCenterButton = ({ position }) => {
   const map = useMap();
 
@@ -57,7 +59,6 @@ const ReCenterButton = ({ position }) => {
     if (position) {
       map.setView(position, 18, { animate: true }); // ✅ ซูมเข้าไปที่ตำแหน่งผู้ใช้
       map.invalidateSize(); // ✅ แก้บั๊กแผนที่โหลดไม่ครบ
-
     } else {
       alert("ไม่พบตำแหน่งของคุณ");
     }
@@ -84,7 +85,12 @@ const ReCenterButton = ({ position }) => {
   );
 };
 
-function HeaderBar({ onFilterClick, onProfileClick, onSearchChange }) {
+function HeaderBar({
+  onFilterClick,
+  onProfileClick,
+  onSearchChange,
+  isLoggedIn,
+}) {
   return (
     <header
       style={{
@@ -106,6 +112,11 @@ function HeaderBar({ onFilterClick, onProfileClick, onSearchChange }) {
           alt="Logo"
           style={{ height: "40px" }}
         />
+        {isLoggedIn && (
+          <span style={{ marginLeft: "10px", fontSize: "12px", color: "#eee" }}>
+            ●
+          </span>
+        )}
       </div>
       <input
         type="text"
@@ -135,7 +146,13 @@ function HeaderBar({ onFilterClick, onProfileClick, onSearchChange }) {
       <img
         src={require("./img/profile.png")}
         alt="Profile"
-        style={{ height: "40px", marginLeft: "10px", borderRadius: "50%", cursor: "pointer" }}
+        style={{
+          height: "40px",
+          marginLeft: "10px",
+          borderRadius: "50%",
+          cursor: "pointer",
+          border: isLoggedIn ? "2px solid #8effb5" : "none", // แสดงขอบสีเขียวเมื่อล็อกอินแล้ว
+        }}
         onClick={onProfileClick}
       />
     </header>
@@ -157,25 +174,24 @@ function LoginPage({ onClose, onRegisterClick, onLogin }) {
     console.log("🔹 Google Login Success:", credentialResponse);
 
     fetch("http://localhost:3001/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: credentialResponse.credential }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: credentialResponse.credential }),
     })
-    .then((response) => response.json())
-    .then((data) => {
+      .then((response) => response.json())
+      .then((data) => {
         console.log("🔹 Server Response:", data); // ✅ ตรวจสอบค่าที่เซิร์ฟเวอร์ส่งกลับมา
 
         if (data.user) {
-            setUser(data.user);
-            localStorage.setItem("user", JSON.stringify(data.user));
-            onLogin(data.user.name); // ✅ อัปเดตชื่อผู้ใช้
+          setUser(data.user);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          onLogin(data.user.name); // ✅ อัปเดตชื่อผู้ใช้
         } else {
-            alert("Login failed!");
+          alert("Login failed!");
         }
-    })
-    .catch((error) => console.error("🔴 Google Auth Error:", error));
-};
-
+      })
+      .catch((error) => console.error("🔴 Google Auth Error:", error));
+  };
 
   const handleFailure = () => {
     alert("Google login failed. Please try again.");
@@ -194,11 +210,25 @@ function LoginPage({ onClose, onRegisterClick, onLogin }) {
           textAlign: "center",
         }}
       >
-        <h3 style={{ fontSize: 24, fontWeight: "bold", marginBottom: "16px" }}>Login</h3>
+        <h3 style={{ fontSize: 24, fontWeight: "bold", marginBottom: "16px" }}>
+          Login
+        </h3>
 
         {!user ? (
-          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginTop: "20px" }}>
-            <GoogleLogin onSuccess={handleSuccess} onError={handleFailure} size="large" width="250" />
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginTop: "20px",
+            }}
+          >
+            <GoogleLogin
+              onSuccess={handleSuccess}
+              onError={handleFailure}
+              size="large"
+              width="250"
+            />
           </div>
         ) : (
           <div style={{ marginTop: "20px" }}>
@@ -229,8 +259,6 @@ function LoginPage({ onClose, onRegisterClick, onLogin }) {
     </GoogleOAuthProvider>
   );
 }
-
-
 
 function SignUpPage({ onClose, onLoginClick }) {
   return (
@@ -522,25 +550,25 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
             border: "1px solid #006642",
             color: "#006642",
             padding: "10px",
-            borderRadius: "15px"
+            borderRadius: "15px",
           }}
         >
           Clear
         </button>
         <button
-  onClick={() => {
-    applyFilters();
-    onClose(); // ✅ ปิดหน้า Filter หลังจากกด Done
-  }}
-  style={{
-    backgroundColor: "#006642",
-    color: "white",
-    padding: "10px",
-    borderRadius: "15px"
-  }}
->
-  Done
-</button>
+          onClick={() => {
+            applyFilters();
+            onClose(); // ✅ ปิดหน้า Filter หลังจากกด Done
+          }}
+          style={{
+            backgroundColor: "#006642",
+            color: "white",
+            padding: "10px",
+            borderRadius: "15px",
+          }}
+        >
+          Done
+        </button>
       </div>
     </div>
   );
@@ -549,13 +577,34 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
 function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, commentsByLocation, setCommentsByLocation, NO_IMAGE_URL }) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
-
   const [showLoginAlert, setShowLoginAlert] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // เพิ่ม state สำหรับแสดงสถานะกำลังบันทึก
+
+  // state สำหรับการจัดการรูปภาพ
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  // อ้างอิงไปยัง input file
+  const fileInputRef = useRef(null);
+
+  // ดึงข้อมูล user จาก localStorage
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error("❌ ไม่สามารถแปลงข้อมูลผู้ใช้ได้:", error);
+      }
+    }
+  }, []);
 
   if (!data) return null;
 
   const comments = commentsByLocation[data.name] || [];
-
   const features = data.features;
   const hours = data.hours;
 
@@ -576,31 +625,374 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
     setRating(value);
   };
 
-  const handleCommentSubmit = () => {
-    console.log("🔹 loggedIn:", loggedIn, "🔹 username:", username, "🔹 comment:", comment, "🔹 rating:", rating);
-
-    if (!loggedIn || !username) {
-        console.error("🔴 User is not logged in!"); // ✅ Debug log
-        setShowLoginAlert(true);
-        return;
+  const handleImageChange = (e) => {
+    if (!loggedIn) {
+      setShowLoginAlert(true);
+      return;
     }
 
-    if (comment.trim() !== "") {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedImage(file);
+
+      // สร้าง URL สำหรับแสดงตัวอย่างรูปภาพ
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+    }
+  };
+
+  const handleImageButtonClick = () => {
+    if (!loggedIn) {
+      setShowLoginAlert(true);
+      return;
+    }
+    fileInputRef.current.click();
+  };
+
+  const handleClearImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleCommentSubmit = () => {
+    console.log("🔹 กำลังบันทึกความคิดเห็น...");
+    console.log("🔹 ข้อมูล: ", {
+      loggedIn,
+      username: username || "ไม่ระบุชื่อผู้ใช้",
+      comment,
+      rating,
+      selectedImage: selectedImage ? "มีรูปภาพ" : "ไม่มีรูปภาพ",
+      data: data || "ไม่มีข้อมูล"
+    });
+
+    if (!loggedIn || !user) {
+      console.error("🔴 User is not logged in!");
+      setShowLoginAlert(true);
+      return;
+    }
+
+    // ตรวจสอบว่ามีการให้คะแนนหรือไม่
+    if (rating === 0) {
+      alert("กรุณาให้คะแนนก่อนบันทึกความคิดเห็น");
+      return;
+    }
+
+    // ตรวจสอบว่ามีการเขียนความคิดเห็นหรือไม่
+    if (comment.trim() === "") {
+      alert("กรุณาเขียนความคิดเห็นก่อนบันทึก");
+      return;
+    }
+
+    // ตรวจสอบว่ามี data และ data.id หรือไม่
+    if (!data || !data.id) {
+      console.error("🔴 ไม่พบข้อมูล restroom_id");
+      alert("เกิดข้อผิดพลาดในการบันทึกความคิดเห็น: ไม่พบข้อมูลห้องน้ำ");
+      return;
+    }
+
+    // ตรวจสอบว่ามี user_id หรือไม่
+    if (!user.user_id) {
+      console.error("🔴 ไม่พบข้อมูล user_id");
+      alert("เกิดข้อผิดพลาดในการบันทึกความคิดเห็น: ไม่พบข้อมูลผู้ใช้");
+      return;
+    }
+
+    // แสดงสถานะ loading
+    setIsSubmitting(true);
+
+    try {
+      // สร้าง FormData สำหรับส่งข้อมูลและรูปภาพ
+      const formData = new FormData();
+      formData.append("restroom_id", data.id);
+      formData.append("user_id", user.user_id);
+      formData.append("rating", rating);
+      formData.append("comment", comment);
+
+      // แสดงรายละเอียด FormData ใน console
+      console.log("🔹 FormData entries:");
+      for (let [key, value] of formData.entries()) {
+        console.log(`   ${key}: ${value}`);
+      }
+
+      // ถ้ามีรูปภาพ ให้แนบไปด้วย
+      if (selectedImage) {
+        console.log("🔹 กำลังเพิ่มรูปภาพ:", selectedImage.name, "ขนาด:", selectedImage.size, "bytes");
+        formData.append("photo", selectedImage);
+
+        // ตรวจสอบว่ารูปภาพมีขนาดใหญ่เกินไปหรือไม่
+        if (selectedImage.size > 5 * 1024 * 1024) { // 5MB
+          alert("รูปภาพมีขนาดใหญ่เกินไป กรุณาใช้รูปภาพที่มีขนาดไม่เกิน 5MB");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // ทดลองใช้วิธี base64 แทนถ้าการอัปโหลดไฟล์ไม่ทำงาน
+      if (selectedImage && window.FileReader) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const base64data = e.target.result;
+          sendReviewWithBase64(formData, base64data);
+        };
+        reader.readAsDataURL(selectedImage);
+      } else {
+        // ส่งข้อมูลไปยัง API แบบปกติ
+        sendReviewData(formData);
+      }
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการสร้าง FormData:", error);
+      alert("เกิดข้อผิดพลาดในการเตรียมข้อมูล กรุณาลองใหม่อีกครั้ง");
+      setIsSubmitting(false);
+    }
+  };
+
+  // ฟังก์ชันสำหรับส่งรีวิวพร้อมรูปภาพแบบ base64
+  const sendReviewWithBase64 = (formData, base64Image) => {
+    try {
+      console.log("🔶 API_URL:", API_URL);
+      console.log("🔶 Full URL for review submission:", `${API_URL}/review/base64`);
+
+      // ต้องแน่ใจว่า formData มีข้อมูลที่จำเป็นครบถ้วน
+      if (!formData.get("restroom_id") || !formData.get("user_id") || !formData.get("rating")) {
+        throw new Error("Missing required data");
+      }
+
+      // แยกข้อมูล base64 ออกจาก header (เช่น data:image/jpeg;base64,)
+      let base64String = base64Image;
+      if (base64Image.includes(';base64,')) {
+        base64String = base64Image.split(';base64,')[1];
+      }
+
+      // สร้างข้อมูลที่จะส่ง
+      const reviewData = {
+        restroom_id: formData.get("restroom_id"),
+        user_id: formData.get("user_id"),
+        rating: formData.get("rating"),
+        comment: formData.get("comment") || "",
+        photo_base64: base64String
+      };
+
+      // แสดง log ข้อมูลที่จะส่ง
+      console.log("🔹 Sending review data:", {
+        restroom_id: reviewData.restroom_id,
+        user_id: reviewData.user_id,
+        rating: reviewData.rating,
+        comment: reviewData.comment,
+        photo_base64_length: reviewData.photo_base64 ? reviewData.photo_base64.length : 0
+      });
+
+      // ทดสอบส่งข้อมูลไปยัง endpoint ทดสอบก่อน
+      console.log("🔹 ทดสอบส่งข้อมูลไปยัง /test-base64 ก่อน...");
+      fetch(`${API_URL}/test-base64`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          test: "data",
+          timestamp: new Date().toISOString()
+        })
+      })
+        .then(response => {
+          console.log("🔹 ผลการทดสอบ /test-base64:", response.status, response.statusText);
+          if (!response.ok) {
+            console.error("⚠️ Test endpoint failed, but continuing with actual request");
+          }
+
+          // ส่งข้อมูลไปยัง API จริง
+          console.log("🔹 กำลังส่งข้อมูลไปยัง /review/base64...");
+          return fetch(`${API_URL}/review/base64`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(reviewData)
+          });
+        })
+        .then(response => {
+          // ตรวจสอบสถานะ response
+          console.log("🔹 สถานะการส่งข้อมูล:", response.status, response.statusText);
+          if (!response.ok) {
+            // ถ้ามี error ให้อ่านข้อความ error ก่อน
+            return response.text().then(text => {
+              console.error("❌ Server error response:", text);
+              throw new Error(`Server responded with status: ${response.status}. ${text}`);
+            });
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log("✅ Review submission successful:", data);
+          // เรียกฟังก์ชันสำหรับจัดการความสำเร็จ
+          handleResponse(data);
+        })
+        .catch(error => {
+          console.error("❌ Error in review submission:", error);
+
+          // แสดงข้อมูลเพิ่มเติมเกี่ยวกับ error
+          console.error("Error details:", {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          });
+
+          // ถ้าส่งข้อมูลไปยัง /review/base64 ไม่สำเร็จ ให้ลองส่งผ่าน /review แทน
+          console.log("🔸 ลองส่งข้อมูลผ่าน /review แทน...");
+
+          // สร้าง FormData ใหม่
+          const alternativeFormData = new FormData();
+          alternativeFormData.append("restroom_id", reviewData.restroom_id);
+          alternativeFormData.append("user_id", reviewData.user_id);
+          alternativeFormData.append("rating", reviewData.rating);
+          alternativeFormData.append("comment", reviewData.comment);
+
+          // แปลงรูปภาพ base64 กลับเป็นไฟล์ (ถ้าทำได้)
+          if (base64Image && base64Image.includes(';base64,')) {
+            try {
+              const contentType = base64Image.split(';')[0].split(':')[1];
+              const byteCharacters = atob(base64Image.split(',')[1]);
+              const byteArrays = [];
+
+              for (let i = 0; i < byteCharacters.length; i++) {
+                byteArrays.push(byteCharacters.charCodeAt(i));
+              }
+
+              const byteArray = new Uint8Array(byteArrays);
+              const blob = new Blob([byteArray], { type: contentType });
+              const file = new File([blob], "review_image.jpg", { type: contentType });
+
+              alternativeFormData.append("photo", file);
+            } catch (e) {
+              console.error("❌ ไม่สามารถแปลง base64 เป็นไฟล์ได้:", e);
+            }
+          }
+
+          return fetch(`${API_URL}/review`, {
+            method: "POST",
+            body: alternativeFormData
+          })
+            .then(response => {
+              console.log("🔹 สถานะการส่งข้อมูลผ่าน /review:", response.status, response.statusText);
+              if (!response.ok) {
+                return response.text().then(text => {
+                  throw new Error(`Alternative endpoint failed: ${response.status}. ${text}`);
+                });
+              }
+              return response.json();
+            })
+            .then(data => {
+              console.log("✅ Review submission via alternative endpoint successful:", data);
+              handleResponse(data);
+            })
+            .catch(altError => {
+              console.error("❌ Alternative endpoint also failed:", altError);
+              // เรียกฟังก์ชันสำหรับจัดการข้อผิดพลาด
+              handleError(error); // ใช้ error เดิม เพราะนั่นคือ error หลัก
+            });
+        });
+    } catch (error) {
+      console.error("❌ Error preparing review data:", error);
+      handleError(error);
+    }
+  };
+
+  const sendReviewData = (formData) => {
+    console.log("🔹 ส่งข้อมูลแบบ FormData");
+
+    fetch(`${API_URL}/review`, {
+      method: "POST",
+      body: formData,
+    })
+      .then(response => {
+        console.log("🔹 สถานะการส่งข้อมูล:", response.status, response.statusText);
+        if (!response.ok) {
+          return response.text().then(text => {
+            throw new Error(`Server responded with status: ${response.status}. ${text}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log("✅ บันทึกความคิดเห็นสำเร็จ:", data);
+
+        // สร้างข้อมูลความคิดเห็นใหม่
         const newComment = {
-            username: username,  
-            text: comment,
-            rating: rating,
-            date: new Date().toLocaleDateString("en-GB"),
+          username: username,
+          text: comment,
+          rating: rating,
+          date: new Date().toLocaleDateString("en-GB"),
+          image: data.photo_url || null
         };
 
+        // อัปเดตข้อมูลความคิดเห็น
         setCommentsByLocation((prevComments) => ({
-            ...prevComments,
-            [data.name]: [...(prevComments[data.name] || []), newComment],
+          ...prevComments,
+          [data.name]: [...(prevComments[data.name] || []), newComment],
         }));
 
+        alert("บันทึกความคิดเห็นสำเร็จ!");
         setComment("");
         setRating(0);
+        handleClearImage();
+        setIsSubmitting(false);
+      })
+      .catch(handleError);
+  };
+  // ฟังก์ชันจัดการ response
+  const handleResponse = (data) => {
+    // ตรวจสอบว่าเป็น Response object หรือไม่
+    if (data && typeof data.json === 'function') {
+      return data.json().then(result => {
+        // ดำเนินการกับข้อมูล result ต่อไป
+      });
+    } else {
+      // ถ้าไม่ใช่ Response object ให้ใช้ข้อมูลนั้นเลย
+      console.log("✅ บันทึกความคิดเห็นสำเร็จ:", data);
+
+      // สร้างข้อมูลความคิดเห็นใหม่และแสดงผล
+      const newComment = {
+        username: username,
+        text: comment,
+        rating: rating,
+        date: new Date().toLocaleDateString("en-GB"),
+        image: data.photo_url || null
+      };
+
+      // อัปเดตและแสดงข้อมูล
+      setCommentsByLocation((prevComments) => ({
+        ...prevComments,
+        [data.name]: [...(prevComments[data.name] || []), newComment],
+      }));
+
+      alert("บันทึกความคิดเห็นสำเร็จ!");
+      setComment("");
+      setRating(0);
+      handleClearImage();
+      setIsSubmitting(false);
     }
+  };
+
+  // ฟังก์ชันจัดการข้อผิดพลาด
+  // แก้ไขใน handleError ใน src/App.js
+  const handleError = (error) => {
+    console.error("❌ เกิดข้อผิดพลาดในการบันทึกความคิดเห็น:", error);
+
+    // แสดงข้อความแจ้งเตือนที่เฉพาะเจาะจงมากขึ้น
+    let errorMessage = "เกิดข้อผิดพลาดในการบันทึกความคิดเห็น กรุณาลองใหม่อีกครั้ง";
+
+    if (error.message) {
+      if (error.message.includes("undefined")) {
+        errorMessage = "ไม่สามารถติดต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่อ";
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
+    alert(errorMessage);
+    setIsSubmitting(false);
   };
 
   return (
@@ -617,23 +1009,22 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
       overflowY: "auto",
       padding: "20px",
     }}>
+      {/* Login Alert Modal */}
       {showLoginAlert && (
-        <div
-          style={{
-            position: "fixed",
-            top: "30%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            backgroundColor: "white",
-            padding: "20px",
-            borderRadius: "15px",
-            boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
-            textAlign: "center",
-            zIndex: 2000,
-            width: "320px",
-            border: "2px solid rgba(0, 0, 0, 0.1)"
-          }}
-        >
+        <div style={{
+          position: "fixed",
+          top: "30%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          backgroundColor: "white",
+          padding: "20px",
+          borderRadius: "15px",
+          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
+          textAlign: "center",
+          zIndex: 2000,
+          width: "320px",
+          border: "2px solid rgba(0, 0, 0, 0.1)"
+        }}>
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button
               onClick={() => setShowLoginAlert(false)}
@@ -673,6 +1064,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         </div>
       )}
 
+      {/* Close Button */}
       <div
         style={{
           position: "sticky",
@@ -704,57 +1096,138 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         </button>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontWeight: 'bold' }}>{data.name}</h3>
+      {/* Restroom Details */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <h3 style={{ fontWeight: "bold" }}>{data.name}</h3>
       </div>
-      <p><strong>ชั้น:</strong> {data.floor}</p>
+      <p>
+        <strong>ชั้น:</strong> {data.floor}
+      </p>
       <div>
         <strong>Rating:</strong> {data.rating} ⭐
       </div>
       <br />
 
+      {/* Features */}
       <div>
         <strong>Features:</strong>
         <ul>
-          <li style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            Women's restroom <span style={{ marginLeft: '10px' }}>{features.women ? '✔' : '✘'}</span>
+          <li
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            Women's restroom{" "}
+            <span style={{ marginLeft: "10px" }}>
+              {features.women ? "✔" : "✘"}
+            </span>
           </li>
-          <li style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            Men's restroom <span style={{ marginLeft: '10px' }}>{features.men ? '✔' : '✘'}</span>
+          <li
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            Men's restroom{" "}
+            <span style={{ marginLeft: "10px" }}>
+              {features.men ? "✔" : "✘"}
+            </span>
           </li>
-          <li style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            Accessible restroom <span style={{ marginLeft: '10px' }}>{features.accessible ? '✔' : '✘'}</span>
+          <li
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            Accessible restroom{" "}
+            <span style={{ marginLeft: "10px" }}>
+              {features.accessible ? "✔" : "✘"}
+            </span>
           </li>
-          <li style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            Bidet <span style={{ marginLeft: '10px' }}>{features.bidet ? '✔' : '✘'}</span>
+          <li
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            Bidet{" "}
+            <span style={{ marginLeft: "10px" }}>
+              {features.bidet ? "✔" : "✘"}
+            </span>
           </li>
-          <li style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            Tissue available <span style={{ marginLeft: '10px' }}>{features.tissue ? '✔' : '✘'}</span>
+          <li
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            Tissue available{" "}
+            <span style={{ marginLeft: "10px" }}>
+              {features.tissue ? "✔" : "✘"}
+            </span>
           </li>
-          <li style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-            Free to use <span style={{ marginLeft: '10px' }}>{features.free ? '✔' : '✘'}</span>
+          <li
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            Free to use{" "}
+            <span style={{ marginLeft: "10px" }}>
+              {features.free ? "✔" : "✘"}
+            </span>
           </li>
         </ul>
       </div>
       <br />
 
+      {/* Opening Hours */}
       <div>
         <strong>Opening Hours:</strong>
         <ul>
           {Object.keys(hours).map((day) => (
-            <li key={day} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+            <li
+              key={day}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                width: "100%",
+              }}
+            >
               <span>{day.charAt(0).toUpperCase() + day.slice(1)}:</span>
-              <span style={{ marginLeft: '10px' }}>{hours[day]}</span>
+              <span style={{ marginLeft: "10px" }}>{hours[day]}</span>
             </li>
           ))}
         </ul>
       </div>
+
+      {/* Images */}
       <div style={{ marginTop: "20px" }}>
         <strong>Images:</strong>
         {Array.isArray(data.imageUrls) && data.imageUrls.length > 0 ? (
           <Slider {...settings}>
             {data.imageUrls.map((image, index) => (
-              <div key={index} style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+              <div
+                key={index}
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
                 <img
                   src={image}
                   alt={`Image ${index + 1}`}
@@ -766,12 +1239,12 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
                     objectFit: "contain",
                     borderRadius: "10px",
                     border: "1px solid #ddd",
-                    padding: "5px"
+                    padding: "5px",
                   }}
-                  onError={(e) => { 
+                  onError={(e) => {
                     console.error(`❌ Error loading image: ${image}`);
-                    e.target.src = NO_IMAGE_URL; // ✅ ใช้รูป Default ถ้าโหลดไม่สำเร็จ
-                  }} 
+                    e.target.src = NO_IMAGE_URL;
+                  }}
                 />
               </div>
             ))}
@@ -781,6 +1254,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         )}
       </div>
 
+      {/* Rating Section */}
       <div style={{ marginTop: "20px" }}>
         <strong>Rating</strong>
         <div style={{ display: "flex", fontSize: "24px", cursor: "pointer" }}>
@@ -788,7 +1262,10 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             <span
               key={star}
               onClick={() => handleRatingClick(star)}
-              style={{ color: star <= rating ? "#FFD700" : "#ccc", marginRight: "5px" }}
+              style={{
+                color: star <= rating ? "#FFD700" : "#ccc",
+                marginRight: "5px",
+              }}
             >
               ★
             </span>
@@ -796,6 +1273,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         </div>
       </div>
 
+      {/* Comment Text Area */}
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
@@ -810,44 +1288,999 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         }}
       />
 
+      {/* Image Upload Section - NEW */}
+      <div style={{ marginTop: "10px", marginBottom: "10px" }}>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          style={{ display: "none" }}
+          ref={fileInputRef}
+        />
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "10px",
+          }}
+        >
+          <button
+            onClick={handleImageButtonClick}
+            style={{
+              padding: "8px 15px",
+              backgroundColor: "#f0f0f0",
+              color: "#333",
+              border: "1px solid #ccc",
+              borderRadius: "5px",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+            }}
+          >
+            📷 เพิ่มรูปภาพ
+          </button>
+
+          {imagePreview && (
+            <button
+              onClick={handleClearImage}
+              style={{
+                padding: "8px 15px",
+                backgroundColor: "#fff0f0",
+                color: "#d9534f",
+                border: "1px solid #d9534f",
+                borderRadius: "5px",
+              }}
+            >
+              ❌ ยกเลิก
+            </button>
+          )}
+        </div>
+
+        {/* Image Preview */}
+        {imagePreview && (
+          <div style={{ marginTop: "10px", position: "relative" }}>
+            <img
+              src={imagePreview}
+              alt="Preview"
+              style={{
+                width: "100%",
+                maxHeight: "200px",
+                objectFit: "contain",
+                borderRadius: "5px",
+                border: "1px solid #ddd",
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Submit Button */}
       <button
         onClick={handleCommentSubmit}
+        disabled={isSubmitting}
         style={{
           marginTop: "10px",
           padding: "10px",
-          backgroundColor: "#006642",
+          backgroundColor: isSubmitting ? "#a0c1b0" : "#006642",
           color: "white",
           border: "none",
           borderRadius: "5px",
           width: "100%",
+          cursor: isSubmitting ? "wait" : "pointer",
         }}
       >
-        Submit
+        {isSubmitting ? "กำลังบันทึก..." : "Submit"}
       </button>
 
+      {/* Comments Section */}
       <div style={{ marginTop: "20px" }}>
         <strong>Comment</strong>
         {comments.map((c, index) => (
-          <div key={index} style={{ marginTop: "10px", borderBottom: "1px solid #ccc", paddingBottom: "5px" }}>
+          <div
+            key={index}
+            style={{
+              marginTop: "10px",
+              borderBottom: "1px solid #ccc",
+              paddingBottom: "5px",
+            }}
+          >
             <strong>{c.username}</strong>
             <div style={{ color: "#FFD700", fontSize: "16px" }}>
               {"★".repeat(c.rating) + "☆".repeat(5 - c.rating)}
             </div>
             <p>{c.text}</p>
+
+            {/* รูปภาพของความคิดเห็น - NEW */}
+            {c.image && (
+              <div style={{ marginTop: "5px", marginBottom: "5px" }}>
+                <img
+                  src={c.image}
+                  alt="Comment image"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "200px",
+                    borderRadius: "5px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    // สามารถเพิ่มฟังก์ชันเปิดรูปภาพแบบเต็มจอได้ตรงนี้
+                    window.open(c.image, "_blank");
+                  }}
+                />
+              </div>
+            )}
+
             <span style={{ fontSize: "12px", color: "gray" }}>{c.date}</span>
           </div>
         ))}
       </div>
-
     </div>
+  );
+}
 
+function MyReviewsPage({ onClose, username, commentsByLocation }) {
+  const [userReviews, setUserReviews] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Function to fetch user's reviews from the API
+  useEffect(() => {
+    const fetchUserReviews = async () => {
+      setIsLoading(true);
+      try {
+        // Get user ID from localStorage
+        const storedUser = localStorage.getItem("user");
+        if (!storedUser) {
+          setUserReviews([]);
+          setIsLoading(false);
+          return;
+        }
+
+        const user = JSON.parse(storedUser);
+        const userId = user.user_id;
+
+        // Fetch user's reviews from API
+        const response = await fetch(`${API_URL}/reviews/user/${userId}`);
+        if (!response.ok) {
+          throw new Error(`API responded with status: ${response.status}`);
+        }
+
+        const reviewData = await response.json();
+        console.log("🔹 ดึงข้อมูลรีวิวของผู้ใช้สำเร็จ:", reviewData);
+
+        // Format the reviews for display
+        const formattedReviews = reviewData.map(item => ({
+          id: item.review_id,
+          location: item.building_name,
+          floor: item.floor || "ไม่ระบุ",
+          rating: item.rating,
+          comment: item.comment,
+          date: new Date(item.created_at).toLocaleDateString('th-TH'),
+          imageUrl: item.photo_url || null
+        }));
+
+        setUserReviews(formattedReviews);
+      } catch (error) {
+        console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลรีวิว:", error);
+
+        // Fallback: Filter reviews from existing commentsByLocation data
+        console.log("🔶 ใช้ข้อมูลสำรองจาก commentsByLocation");
+        const allUserReviews = [];
+
+        Object.entries(commentsByLocation).forEach(([location, comments]) => {
+          comments.forEach(comment => {
+            if (comment.username === username) {
+              allUserReviews.push({
+                location: location,
+                floor: "ไม่ระบุ", // We don't have floor info in commentsByLocation
+                rating: comment.rating,
+                comment: comment.text,
+                date: comment.date,
+                imageUrl: comment.image || null
+              });
+            }
+          });
+        });
+
+        setUserReviews(allUserReviews);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserReviews();
+  }, [username, commentsByLocation]);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: "60px",
+        left: 0,
+        width: "100%",
+        height: "calc(100vh - 60px)",
+        backgroundColor: "white",
+        zIndex: 1001,
+        padding: "20px",
+        overflowY: "auto",
+      }}
+    >
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "20px"
+      }}>
+        <h2 style={{
+          fontSize: "24px",
+          fontWeight: "bold",
+          margin: 0
+        }}>
+          รีวิวของฉัน
+        </h2>
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "24px",
+            cursor: "pointer",
+          }}
+        >
+          ✖
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <p>กำลังโหลดข้อมูล...</p>
+        </div>
+      ) : userReviews.length === 0 ? (
+        <div style={{
+          textAlign: "center",
+          padding: "40px 0",
+          color: "#666"
+        }}>
+          <p>คุณยังไม่มีรีวิว</p>
+          <p>เมื่อคุณรีวิวห้องน้ำ รายการจะแสดงที่นี่</p>
+        </div>
+      ) : (
+        <div>
+          {userReviews.map((review, index) => (
+            <div
+              key={index}
+              style={{
+                marginBottom: "20px",
+                padding: "15px",
+                borderRadius: "10px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                backgroundColor: "#f9f9f9"
+              }}
+            >
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "5px"
+              }}>
+                <h3 style={{
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                  margin: 0
+                }}>
+                  {review.location}
+                </h3>
+                <span style={{
+                  fontSize: "14px",
+                  color: "#666"
+                }}>
+                  {review.date}
+                </span>
+              </div>
+              <p style={{
+                margin: "5px 0",
+                fontSize: "14px",
+                color: "#666"
+              }}>
+                ชั้น: {review.floor}
+              </p>
+
+              <div style={{
+                color: "#FFD700",
+                fontSize: "16px",
+                margin: "8px 0"
+              }}>
+                {"★".repeat(review.rating) + "☆".repeat(5 - review.rating)}
+              </div>
+
+              <p style={{
+                margin: "10px 0",
+                fontSize: "16px"
+              }}>
+                {review.comment}
+              </p>
+
+              {review.imageUrl && (
+                <div style={{ marginTop: "10px" }}>
+                  <img
+                    src={review.imageUrl}
+                    alt="รูปภาพรีวิว"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "200px",
+                      borderRadius: "8px",
+                      objectFit: "contain"
+                    }}
+                    onClick={() => window.open(review.imageUrl, "_blank")}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserProfile({ username, handleLogout, setShowUserProfile, mapRef, userPosition, commentsByLocation }) {
+  console.log("🔹 DEBUG - UserProfile component rendered");
+  const [showMyReviews, setShowMyReviews] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [displayName, setDisplayName] = useState(username || "");
+
+  useEffect(() => {
+    // ตรวจสอบข้อมูลจาก props ก่อน
+    if (username) {
+      setDisplayName(username);
+      return;
+    }
+
+    // ถ้าไม่มี username จาก props ให้ลองดึงจาก localStorage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        const fullName = `${parsedUser.first_name || ""} ${parsedUser.last_name || ""}`.trim();
+        if (fullName) {
+          setDisplayName(fullName);
+          console.log("🔹 ดึงชื่อผู้ใช้จาก localStorage สำเร็จ:", fullName);
+        }
+      } catch (error) {
+        console.error("❌ ข้อผิดพลาดในการดึงชื่อผู้ใช้:", error);
+      }
+    }
+  }, [username]);
+
+  // Check if current user is admin
+  useEffect(() => {
+    const checkIfAdmin = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          // Check if user has admin email
+          if (user.email === "admkutoilet@gmail.com") {
+            setIsAdmin(true);
+            console.log("🔹 Admin user detected");
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error("❌ Error checking admin status:", error);
+          setIsAdmin(false);
+        }
+      }
+    };
+
+    checkIfAdmin();
+  }, []);
+
+  // Function to handle "Find a toilet" button click
+  const handleFindToiletClick = () => {
+    console.log("🔹 Find a toilet button clicked");
+    // Close the profile view
+    setShowUserProfile(false);
+
+    // Center the map on the KU campus area with a good zoom level to show markers
+    if (mapRef && mapRef.current) {
+      const map = mapRef.current;
+      // Center on KU campus with appropriate zoom level
+      map.setView([13.84599, 100.571218], 15, { animate: true });
+      console.log("🔹 Map centered on KU campus");
+    } else {
+      console.warn("❌ Map reference not available");
+    }
+  };
+
+  // Function to handle "Near Me" button click
+  const handleNearMeClick = () => {
+    console.log("🔹 Near Me button clicked");
+    // Close the profile view
+    setShowUserProfile(false);
+
+    // Center the map on the user's current position
+    if (mapRef && mapRef.current && userPosition) {
+      const map = mapRef.current;
+      // Center on user's position with high zoom level (18)
+      map.setView(userPosition, 18, { animate: true });
+      map.invalidateSize(); // Fix map rendering issues
+      console.log("🔹 Map centered on user's position:", userPosition);
+    } else {
+      // If position is not available, show alert
+      alert("ไม่พบตำแหน่งของคุณ กรุณาอนุญาตการเข้าถึงตำแหน่ง");
+      console.warn("❌ User position not available");
+    }
+  };
+
+  // Function to handle "My review" button click
+  const handleMyReviewClick = () => {
+    console.log("🔹 My review button clicked");
+    setShowMyReviews(true);
+  };
+
+  // Function to handle "Admin Panel" button click
+  const handleAdminPanelClick = () => {
+    console.log("🔹 Admin panel button clicked");
+    setShowAdminPanel(true);
+  };
+
+  return (
+    <>
+      <div
+        style={{
+          position: "fixed",
+          top: "60px",
+          left: 0,
+          width: "100%",
+          backgroundColor: "white",
+          padding: "20px",
+          textAlign: "center",
+          zIndex: 1001,
+          boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.1)",
+          borderRadius: "0 0 10px 10px",
+          height: "calc(100vh - 60px)",
+          overflowY: "auto",
+        }}
+      >
+        <h1 style={{ fontSize: "30px", fontWeight: "bold", marginTop: "30px" }}>
+          Hello, {displayName || "Guest"}
+        </h1>
+        <p style={{ fontSize: "16px", color: "#555", marginTop: "10px" }}>
+          Have a nice day :)
+        </p>
+
+        {/* Admin badge for admin users */}
+        {isAdmin && (
+          <div style={{
+            backgroundColor: "#006642",
+            color: "white",
+            padding: "5px 15px",
+            borderRadius: "20px",
+            display: "inline-block",
+            marginTop: "10px",
+            fontSize: "14px",
+            fontWeight: "bold"
+          }}>
+            Admin
+          </div>
+        )}
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "15px",
+            alignItems: "center",
+            marginTop: "40px",
+          }}
+        >
+          {/* Find a toilet button */}
+          <button
+            onClick={handleFindToiletClick}
+            style={profileButtonStyle}
+          >
+            Find a toilet
+          </button>
+
+          {/* Near Me button with click handler */}
+          <button
+            onClick={handleNearMeClick}
+            style={profileButtonStyle}
+          >
+            Near Me
+          </button>
+
+          {/* My review button with click handler */}
+          <button
+            onClick={handleMyReviewClick}
+            style={profileButtonStyle}
+          >
+            My Reviews
+          </button>
+
+          {/* Admin Panel button - only visible for admin users */}
+          {isAdmin && (
+            <button
+              onClick={handleAdminPanelClick}
+              style={{
+                ...profileButtonStyle,
+                backgroundColor: "#006642",
+                color: "white",
+                border: "none"
+              }}
+            >
+              Admin Panel
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={handleLogout}
+          style={{
+            fontWeight: "bold",
+            padding: "15px 40px",
+            backgroundColor: "#006642",
+            color: "#fff",
+            border: "none",
+            borderRadius: "25px",
+            width: "80%",
+            marginTop: "40px",
+          }}
+        >
+          Logout
+        </button>
+      </div>
+
+      {/* My Reviews Page */}
+      {showMyReviews && (
+        <MyReviewsPage
+          onClose={() => setShowMyReviews(false)}
+          username={username}
+          commentsByLocation={commentsByLocation}
+        />
+      )}
+
+      {/* Admin Panel */}
+      {showAdminPanel && isAdmin && (
+        <AdminPanel
+          onClose={() => setShowAdminPanel(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function AdminPanel({ onClose }) {
+  const [allReviews, setAllReviews] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState('all');
+  const [locations, setLocations] = useState([]);
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+  const [deletingReviewId, setDeletingReviewId] = useState(null);
+
+  // Fetch all reviews when component mounts
+  useEffect(() => {
+    console.log("🔹 กำลังโหลดข้อมูลแอดมิน...");
+    fetchAllReviews();
+  }, []);
+
+  const fetchAllReviews = async () => {
+    setIsLoading(true);
+    try {
+      // ดึงข้อมูลผู้ใช้จาก localStorage
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        setAllReviews([]);
+        setIsLoading(false);
+        alert("กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้");
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+
+      // ตรวจสอบว่าผู้ใช้มีสิทธิแอดมินหรือไม่ (จากอีเมล)
+      if (user.email !== "admkutoilet@gmail.com") {
+        alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+        setIsLoading(false);
+        return;
+      }
+
+      // ส่งอีเมลไปด้วยใน query params เพื่อยืนยันตัวตน
+      const response = await fetch(`${API_URL}/admin/reviews?email=${encodeURIComponent(user.email)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': user.email  // เพิ่ม header นี้เพื่อความมั่นใจ
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`API responded with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("🔹 ดึงข้อมูลรีวิวทั้งหมดสำเร็จ:", data);
+
+      // Extract unique locations
+      const uniqueLocations = [...new Set(data.map(item => item.building_name))];
+      setLocations(['all', ...uniqueLocations]);
+
+      // Format reviews for display
+      const formattedReviews = data.map(item => ({
+        id: item.review_id,
+        userId: item.user_id,
+        userName: `${item.first_name} ${item.last_name}`,
+        userEmail: item.email,
+        location: item.building_name,
+        floor: item.floor || "ไม่ระบุ",
+        rating: item.rating,
+        comment: item.comment,
+        date: new Date(item.created_at).toLocaleDateString('th-TH'),
+        imageUrl: item.photo_url || null
+      }));
+
+      setAllReviews(formattedReviews);
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลรีวิว:", error);
+      alert(`ไม่สามารถดึงข้อมูลรีวิวได้: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter reviews based on search term and selected location
+  const filteredReviews = allReviews.filter(review => {
+    const matchesSearch =
+      review.comment.toLowerCase().includes(filter.toLowerCase()) ||
+      review.userName.toLowerCase().includes(filter.toLowerCase()) ||
+      review.userEmail.toLowerCase().includes(filter.toLowerCase()) ||
+      review.location.toLowerCase().includes(filter.toLowerCase());
+
+    const matchesLocation =
+      selectedLocation === 'all' ||
+      review.location === selectedLocation;
+
+    return matchesSearch && matchesLocation;
+  });
+
+  // Handle review deletion
+  const handleDeleteReview = async (reviewId) => {
+    setDeletingReviewId(reviewId);
+
+    try {
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        alert("กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้");
+        setDeleteConfirmation(null);
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+
+      // ส่งอีเมลไปทั้งใน URL และ Header
+      const response = await fetch(`${API_URL}/admin/reviews/${reviewId}?email=${encodeURIComponent(user.email)}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Email': user.email
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with status: ${response.status}`);
+      }
+
+      // Remove the deleted review from the state
+      setAllReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId));
+      alert("ลบรีวิวสำเร็จ");
+      setDeleteConfirmation(null);
+    } catch (error) {
+      console.error("❌ เกิดข้อผิดพลาดในการลบรีวิว:", error);
+      alert("ไม่สามารถลบรีวิวได้ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setDeletingReviewId(null);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: "60px",
+        left: 0,
+        width: "100%",
+        height: "calc(100vh - 60px)",
+        backgroundColor: "white",
+        zIndex: 1001,
+        padding: "20px",
+        overflowY: "auto",
+      }}
+    >
+      {/* Header with title and close button */}
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "20px"
+      }}>
+        <h2 style={{
+          fontSize: "24px",
+          fontWeight: "bold",
+          margin: 0,
+          color: "#006642"
+        }}>
+          แผงควบคุมผู้ดูแลระบบ
+        </h2>
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "24px",
+            cursor: "pointer",
+          }}
+        >
+          ✖
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div style={{
+        display: "flex",
+        marginBottom: "20px",
+        gap: "10px",
+        flexWrap: "wrap"
+      }}>
+        <input
+          type="text"
+          placeholder="ค้นหารีวิว..."
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          style={{
+            padding: "10px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+            flex: "1",
+            minWidth: "200px"
+          }}
+        />
+
+        <select
+          value={selectedLocation}
+          onChange={(e) => setSelectedLocation(e.target.value)}
+          style={{
+            padding: "10px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+            minWidth: "150px"
+          }}
+        >
+          {locations.map((location, index) => (
+            <option key={index} value={location}>
+              {location === 'all' ? 'ทุกสถานที่' : location}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={fetchAllReviews}
+          style={{
+            padding: "10px",
+            backgroundColor: "#006642",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer"
+          }}
+        >
+          รีเฟรช
+        </button>
+      </div>
+
+      {/* Status Information */}
+      <div style={{ marginBottom: "20px" }}>
+        <p>จำนวนรีวิวทั้งหมด: {allReviews.length} | กำลังแสดง: {filteredReviews.length}</p>
+      </div>
+
+      {/* Loading State */}
+      {isLoading ? (
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <p>กำลังโหลดข้อมูล...</p>
+        </div>
+      ) : filteredReviews.length === 0 ? (
+        <div style={{
+          textAlign: "center",
+          padding: "40px 0",
+          color: "#666"
+        }}>
+          <p>ไม่พบรีวิวที่ตรงกับเงื่อนไข</p>
+        </div>
+      ) : (
+        <div>
+          {/* Reviews List */}
+          {filteredReviews.map((review) => (
+            <div
+              key={review.id}
+              style={{
+                marginBottom: "20px",
+                padding: "15px",
+                borderRadius: "10px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                backgroundColor: "#f9f9f9",
+                position: "relative"
+              }}
+            >
+              {/* Delete Button */}
+              <button
+                onClick={() => setDeleteConfirmation(review.id)}
+                style={{
+                  position: "absolute",
+                  top: "10px",
+                  right: "10px",
+                  background: "none",
+                  border: "none",
+                  color: "#d9534f",
+                  cursor: "pointer",
+                  fontSize: "20px"
+                }}
+                title="ลบรีวิวนี้"
+              >
+                🗑️
+              </button>
+
+              {/* User Info */}
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "5px",
+                flexWrap: "wrap"
+              }}>
+                <div>
+                  <h3 style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    margin: 0
+                  }}>
+                    {review.userName}
+                  </h3>
+                  <p style={{
+                    margin: "2px 0 0 0",
+                    fontSize: "14px",
+                    color: "#666"
+                  }}>
+                    {review.userEmail}
+                  </p>
+                </div>
+                <span style={{
+                  fontSize: "14px",
+                  color: "#666"
+                }}>
+                  {review.date}
+                </span>
+              </div>
+
+              {/* Location Info */}
+              <div style={{
+                backgroundColor: "#e8f4ea",
+                padding: "5px 10px",
+                borderRadius: "5px",
+                display: "inline-block",
+                margin: "10px 0"
+              }}>
+                <strong>{review.location}</strong>
+                <span> | ชั้น: {review.floor}</span>
+              </div>
+
+              {/* Rating */}
+              <div style={{
+                color: "#FFD700",
+                fontSize: "16px",
+                margin: "8px 0"
+              }}>
+                {"★".repeat(review.rating) + "☆".repeat(5 - review.rating)}
+              </div>
+
+              {/* Comment */}
+              <p style={{
+                margin: "10px 0",
+                fontSize: "16px",
+                backgroundColor: "#fff",
+                padding: "10px",
+                borderRadius: "5px",
+                border: "1px solid #eee"
+              }}>
+                {review.comment}
+              </p>
+
+              {/* Review Image */}
+              {review.imageUrl && (
+                <div style={{ marginTop: "10px" }}>
+                  <img
+                    src={review.imageUrl}
+                    alt="รูปภาพรีวิว"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "200px",
+                      borderRadius: "8px",
+                      objectFit: "contain",
+                      border: "1px solid #ddd"
+                    }}
+                    onClick={() => window.open(review.imageUrl, "_blank")}
+                  />
+                </div>
+              )}
+
+              {/* Delete Confirmation Modal */}
+              {deleteConfirmation === review.id && (
+                <div style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: "rgba(255, 255, 255, 0.9)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderRadius: "10px",
+                  zIndex: 2
+                }}>
+                  <p style={{
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    textAlign: "center",
+                    margin: "10px 0"
+                  }}>
+                    ยืนยันการลบรีวิวนี้?
+                  </p>
+                  <div style={{
+                    display: "flex",
+                    gap: "10px",
+                    marginTop: "10px"
+                  }}>
+                    <button
+                      onClick={() => setDeleteConfirmation(null)}
+                      style={{
+                        padding: "8px 15px",
+                        backgroundColor: "#f0f0f0",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer"
+                      }}
+                      disabled={deletingReviewId === review.id}
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      onClick={() => handleDeleteReview(review.id)}
+                      style={{
+                        padding: "8px 15px",
+                        backgroundColor: "#d9534f",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer"
+                      }}
+                      disabled={deletingReviewId === review.id}
+                    >
+                      {deletingReviewId === review.id ? "กำลังลบ..." : "ลบ"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 
 function App() {
-
-
   const [loggedIn, setLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
   const [showSignUp, setShowSignUp] = useState(false);
@@ -857,11 +2290,12 @@ function App() {
   const [showFilter, setShowFilter] = useState(false);
   const [commentsByLocation, setCommentsByLocation] = useState({});
   const [userPosition, setUserPosition] = useState(null);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [user, setUser] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [filteredRestrooms, setFilteredRestrooms] = useState([]);
-  const [restrooms, setRestrooms] = useState([]); 
+  const [restrooms, setRestrooms] = useState([]);
+  const mapRef = useRef(null);
 
   const [filters, setFilters] = useState({
     women: false,
@@ -877,7 +2311,7 @@ function App() {
       const matchesSearch =
         !searchText ||
         restroom.name.toLowerCase().includes(searchText.toLowerCase());
-  
+
       return (
         matchesSearch &&
         (!filters.women || restroom.features.women) &&
@@ -888,137 +2322,224 @@ function App() {
         (!filters.free || restroom.features.free)
       );
     });
-  
+
     console.log("🔹 Filtered Restrooms:", filtered);
     setFilteredRestrooms(filtered);
   };
 
   useEffect(() => {
     applyFilters();
-  }, [searchText, filters, restrooms]);  
-  
-  
+  }, [searchText, filters, restrooms]);
+
   useEffect(() => {
     setFilteredRestrooms(restrooms); // ✅ ตั้งค่าข้อมูลที่ถูกกรองให้เป็นข้อมูลทั้งหมดก่อน
   }, [restrooms]);
-  
 
   const NO_IMAGE_URL = require("./img/logo.png");
+
+  const MapController = () => {
+    const map = useMap();
+
+    // Store the map reference when the component mounts
+    useEffect(() => {
+      mapRef.current = map;
+      console.log("🔹 Map reference saved");
+    }, [map]);
+
+    return null;
+  };
 
   const convertGoogleDriveThumbnail = (url) => {
     if (!url || typeof url !== "string") {
       console.warn("❌ Invalid URL provided:", url);
       return NO_IMAGE_URL;
     }
-  
+
     const googleDriveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)\//);
     if (googleDriveMatch) {
       return `https://drive.google.com/thumbnail?id=${googleDriveMatch[1]}&sz=w1000`;
     }
-  
+
     return url;
   };
-  
-  
-  
-  
-  
 
-  
+  const calculateAverageRating = (reviews) => {
+    if (!reviews || reviews.length === 0) return 0;
 
-  
-  
+    let totalRating = 0;
+    let count = 0;
+
+    reviews.forEach(review => {
+      if (review.review && typeof review.review.rating === 'number') {
+        totalRating += review.review.rating;
+        count++;
+      }
+    });
+
+    return count > 0 ? (totalRating / count).toFixed(1) : 0;
+  };
+
   // ✅ โหลดข้อมูลจาก Backend เมื่อ Component โหลด
   useEffect(() => {
+    console.log("🔹 กำลังโหลดข้อมูลห้องน้ำจาก API...");
+
     fetch(`${API_URL}/restrooms/details`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`API responded with status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
-        const transformedData = data.map((item) => ({
-          geocode: [parseFloat(item.restroom.latitude), parseFloat(item.restroom.longitude)],
-          name: item.restroom.building_name,
-          floor: item.restroom.floor,
-          features: {
-            women: item.restroom.is_women,
-            men: item.restroom.is_men,
-            accessible: item.restroom.is_accessible,
-            bidet: item.restroom.is_bum_gun,
-            tissue: item.restroom.is_toilet_paper,
-            free: item.restroom.is_free,
-          },
-          hours: {
-            monday: item.restroom.opening_hours_monday,
-            tuesday: item.restroom.opening_hours_tuesday,
-            wednesday: item.restroom.opening_hours_wednesday,
-            thursday: item.restroom.opening_hours_thursday,
-            friday: item.restroom.opening_hours_friday,
-            saturday: item.restroom.opening_hours_saturday,
-            sunday: item.restroom.opening_hours_sunday,
-          },
-          reviews: item.reviews || [],
-          imageUrls: (item.restroom_photos || []).map(photo => convertGoogleDriveThumbnail(photo.base64)), // 🔥เน้นตรงนี้
-        }));
-  
+        console.log("✅ โหลดข้อมูลห้องน้ำสำเร็จ:", data);
+
+        const transformedData = data.map((item) => {
+          // สร้าง object สำหรับเก็บความคิดเห็นพร้อมรูปภาพ
+          const processedReviews = {};
+
+          // แปลงข้อมูลความคิดเห็นให้มีรูปแบบที่ต้องการ
+          if (item.reviews && Array.isArray(item.reviews)) {
+            item.reviews.forEach(review => {
+              // ถ้ามีรูปภาพประกอบ ให้แนบไปด้วย
+              let reviewImage = null;
+
+              // ตรวจสอบว่า review มี photos หรือไม่
+              if (review.photos && Array.isArray(review.photos) && review.photos.length > 0) {
+                // ใช้ URL รูปภาพแรก
+                reviewImage = convertGoogleDriveThumbnail(review.photos[0].base64);
+              }
+
+              // สร้างข้อมูลความคิดเห็นในรูปแบบที่แอพต้องการ
+              const formattedReview = {
+                username: review.review.first_name + " " + review.review.last_name,
+                text: review.review.comment,
+                rating: review.review.rating,
+                date: new Date().toLocaleDateString("en-GB"), // อาจต้องปรับปรุงให้ใช้วันที่จริงจาก API
+                image: reviewImage
+              };
+
+              // เพิ่มความคิดเห็นเข้าไปในคอลเลกชันของห้องน้ำนี้
+              if (!processedReviews[item.restroom.building_name]) {
+                processedReviews[item.restroom.building_name] = [];
+              }
+              processedReviews[item.restroom.building_name].push(formattedReview);
+            });
+          }
+
+          // เพิ่มข้อมูลความคิดเห็นเข้าไปในแอพ
+          if (Object.keys(processedReviews).length > 0) {
+            setCommentsByLocation(prev => ({
+              ...prev,
+              ...processedReviews
+            }));
+          }
+
+          // สร้างข้อมูลห้องน้ำในรูปแบบที่แอพต้องการ
+          return {
+            id: item.restroom.restroom_id, // เพิ่ม ID เพื่อใช้ในการบันทึกความคิดเห็น
+            geocode: [
+              parseFloat(item.restroom.latitude),
+              parseFloat(item.restroom.longitude),
+            ],
+            name: item.restroom.building_name,
+            floor: item.restroom.floor,
+            rating: calculateAverageRating(item.reviews), // คำนวณคะแนนเฉลี่ย
+            features: {
+              women: item.restroom.is_women,
+              men: item.restroom.is_men,
+              accessible: item.restroom.is_accessible,
+              bidet: item.restroom.is_bum_gun,
+              tissue: item.restroom.is_toilet_paper,
+              free: item.restroom.is_free,
+            },
+            hours: {
+              monday: item.restroom.opening_hours_monday || "ไม่ระบุ",
+              tuesday: item.restroom.opening_hours_tuesday || "ไม่ระบุ",
+              wednesday: item.restroom.opening_hours_wednesday || "ไม่ระบุ",
+              thursday: item.restroom.opening_hours_thursday || "ไม่ระบุ",
+              friday: item.restroom.opening_hours_friday || "ไม่ระบุ",
+              saturday: item.restroom.opening_hours_saturday || "ไม่ระบุ",
+              sunday: item.restroom.opening_hours_sunday || "ไม่ระบุ",
+            },
+            imageUrls: (item.restroom_photos || []).map((photo) =>
+              convertGoogleDriveThumbnail(photo.base64)
+            ),
+          };
+        });
+
         setRestrooms(transformedData);
       })
-      .catch((err) => console.error("❌ Fetch Error:", err));
+      .catch((err) => console.error("❌ Error fetching restrooms:", err));
   }, []);
-  
-  
-  
-
-
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    console.log("🔹 Stored user in localStorage:", storedUser);
+    const loadUserData = () => {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
 
-    if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        
-        // ✅ อัปเดต username ใหม่
-        const fullName = `${parsedUser.first_name} ${parsedUser.last_name}`;
-        setUsername(fullName);  
+          // สร้างชื่อผู้ใช้จากชื่อและนามสกุล (ตรวจสอบค่าว่างด้วย)
+          const firstName = parsedUser.first_name || "";
+          const lastName = parsedUser.last_name || "";
+          const fullName = `${firstName} ${lastName}`.trim();
 
-        setLoggedIn(true);
-    } else {
+          if (fullName) {
+            setUsername(fullName);
+            console.log("✅ พบข้อมูลผู้ใช้: ", fullName);
+          } else {
+            // ถ้าไม่มีชื่อ ให้ใช้อีเมลแทน
+            setUsername(parsedUser.email || "Guest");
+          }
+
+          setLoggedIn(true);
+        } catch (error) {
+          console.error("❌ เกิดข้อผิดพลาดในการแปลงข้อมูลผู้ใช้:", error);
+          localStorage.removeItem("user");
+          setLoggedIn(false);
+          setUser(null);
+          setUsername("");
+        }
+      } else {
+        console.log("⚠️ ไม่พบข้อมูลผู้ใช้ใน localStorage");
         setLoggedIn(false);
         setUser(null);
-    }
-}, [showUserProfile, showLogin]);
+        setUsername("");
+      }
+    };
 
-
-
-
-
-
-
+    loadUserData();
+  }, []);
 
   const handleProfileClick = () => {
+    console.log("🔹 กำลังคลิกที่ไอคอนโปรไฟล์");
+
+    // 1. ถ้ากำลังแสดงหน้า Profile ให้ปิดเท่านั้น
     if (showUserProfile) {
-        // ✅ ปิด Profile ถ้ามันถูกเปิดอยู่
-        setShowUserProfile(false);
-    } else if (showLogin) {
-        // ✅ ถ้าอยู่ในหน้า Login ให้ปิด Login
-        setShowLogin(false);
-    } else {
-        const storedUser = localStorage.getItem("user");
-
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-            setLoggedIn(true);
-            setShowUserProfile(true);
-            setShowLogin(false);  // ✅ ป้องกัน Login แสดงขึ้นมา
-        } else {
-            setShowUserProfile(false);
-            setShowLogin(true);  // ✅ เปิดหน้า Login ถ้ายังไม่ได้ล็อกอิน
-        }
+      console.log("🔹 กำลังปิดหน้าโปรไฟล์");
+      setShowUserProfile(false);
+      return;
     }
-};
 
+    // 2. ถ้ากำลังแสดงหน้า Login ให้ปิดเท่านั้น
+    if (showLogin) {
+      console.log("🔹 กำลังปิดหน้าล็อกอิน");
+      setShowLogin(false);
+      return;
+    }
 
-
-
+    // 3. ตรวจสอบสถานะการล็อกอิน
+    if (loggedIn) {
+      // ถ้าล็อกอินแล้ว ให้เปิดหน้าโปรไฟล์
+      console.log("🔹 ผู้ใช้ล็อกอินแล้ว เปิดหน้าโปรไฟล์");
+      setShowUserProfile(true);
+    } else {
+      // ถ้ายังไม่ได้ล็อกอิน ให้เปิดหน้าล็อกอิน
+      console.log("🔹 ผู้ใช้ยังไม่ได้ล็อกอิน เปิดหน้าล็อกอิน");
+      setShowLogin(true);
+    }
+  };
 
   const handleFilterClick = () => {
     setShowFilter((prev) => !prev);
@@ -1038,86 +2559,87 @@ function App() {
     console.log("🔹 User logged in:", usernameInput);
     setUsername(usernameInput);
     setLoggedIn(true);
-    setShowLogin(false);  // ✅ ปิดหน้า Login หลังล็อกอิน
+    setShowLogin(false);
+    setShowUserProfile(true); // เพิ่มบรรทัดนี้เพื่อแสดงโปรไฟล์หลังล็อกอินทันที
   };
-
 
   const handleLogout = () => {
-    localStorage.removeItem("user"); // ✅ ล้างข้อมูลผู้ใช้
+    console.log("🔹 กำลังออกจากระบบ");
+
+    // ลบข้อมูลผู้ใช้และรีเซ็ตสถานะ
+    localStorage.removeItem("user");
     setUser(null);
     setLoggedIn(false);
+
+    // ปิดหน้าโปรไฟล์
     setShowUserProfile(false);
-    setShowLogin(false);
+
+    // เปิดหน้าล็อกอินทันที
+    setTimeout(() => {
+      setShowLogin(true);
+    }, 100); // ใช้ setTimeout เพื่อให้การเปลี่ยนสถานะมีเวลาอัปเดตก่อน
   };
-
-
-
-
 
   return (
     <GoogleOAuthProvider clientId="577202715001-pa9pfkmbm44haiocpbpg4ran1rn4f824.apps.googleusercontent.com">
       <div>
-      <HeaderBar
-  onFilterClick={() => setShowFilter(!showFilter)}
-  onProfileClick={handleProfileClick}
-  onSearchChange={(text) => {
-    setSearchText(text);
-    applyFilters(); // ✅ อัปเดตการค้นหาแบบเรียลไทม์
-  }}
-/>
+        <HeaderBar
+          onFilterClick={() => setShowFilter(!showFilter)}
+          onProfileClick={handleProfileClick}
+          onSearchChange={(text) => {
+            setSearchText(text);
+            applyFilters();
+          }}
+          isLoggedIn={loggedIn}
+        />
 
-        {loggedIn && showUserProfile ? (
-          <div style={{ padding: "20px", textAlign: "center", marginTop: "100px" }}>
-            <h1 style={{ fontSize: "30px", fontWeight: "bold" }}>Hi, {username}</h1>
-            <p style={{ fontSize: "16px", color: "#555" }}>have a nice day :)</p>
-            <br />
+        {showUserProfile && (
+          <UserProfile
+            username={username}
+            mapRef={mapRef}
+            userPosition={userPosition}
+            commentsByLocation={commentsByLocation}
+            setShowUserProfile={setShowUserProfile}
+            handleLogout={() => {
+              console.log("🔹 กำลังออกจากระบบจากหน้าโปรไฟล์");
+              localStorage.removeItem("user");
+              setUser(null);
+              setLoggedIn(false);
+              setShowUserProfile(false);
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "15px", alignItems: "center" }}>
-              <button style={profileButtonStyle}>Find a toilet</button>
-              <button style={profileButtonStyle}>Near Me</button>
-              <button style={profileButtonStyle}>My review</button>
-            </div>
+              // เปิดหน้าล็อกอินทันที
+              setTimeout(() => {
+                setShowLogin(true);
+              }, 100);
+            }}
+          />
+        )}
 
-            <div style={{ marginTop: "40px" }}>
-              <button
-                onClick={handleLogout}
-                style={{
-                  fontWeight: "bold",
-                  padding: "15px 40px",
-                  backgroundColor: "#006642",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "25px",
-                  width: "80%"
-                }}
-              >
-                Log out
-              </button>
-            </div>
-          </div>
-        ) : null}
         {showLogin && (
-    <LoginPage
-        onClose={() => setShowLogin(false)}
-        onRegisterClick={handleRegisterClick}
-        onLogin={handleLogin}
-    />
-)}
-
-
-
-
-
+          <LoginPage
+            onClose={() => setShowLogin(false)}
+            onRegisterClick={handleRegisterClick}
+            onLogin={handleLogin}
+          />
+        )}
 
         {showSignUp && (
           <SignUpPage
             onClose={() => setShowSignUp(false)}
-            onLoginClick={() => { setShowSignUp(false); setShowLogin(true); }}
+            onLoginClick={() => {
+              setShowSignUp(false);
+              setShowLogin(true);
+            }}
           />
         )}
 
         <MapContainer
-          style={{ width: "100%", height: "100vh", marginTop: "60px", position: "relative" }}
+          style={{
+            width: "100%",
+            height: "100vh",
+            marginTop: "60px",
+            position: "relative",
+          }}
           center={[13.84599, 100.571218]}
           zoom={13}
           scrollWheelZoom={true}
@@ -1128,61 +2650,93 @@ function App() {
           />
           <GPSMarker setUserPosition={setUserPosition} />
           <MarkerClusterGroup>
-  {filteredRestrooms.map((marker, index) => (
-    <Marker
-      key={index}
-      position={marker.geocode}
-      icon={customIcon}
-      eventHandlers={{
-        click: () => setSelectedMarker(marker),
-      }}
-    >
-      <Popup>
-        <h3>{marker.name}</h3>
-        <p>ชั้น: {marker.floor}</p>
-      </Popup>
-    </Marker>
-  ))}
-</MarkerClusterGroup>
+            {filteredRestrooms.map((marker, index) => (
+              <Marker
+                key={index}
+                position={marker.geocode}
+                icon={customIcon}
+                eventHandlers={{
+                  click: () => setSelectedMarker(marker),
+                }}
+              >
+                <Popup>
+                  <h3>{marker.name}</h3>
+                  <p>ชั้น: {marker.floor}</p>
+                </Popup>
+              </Marker>
+            ))}
+          </MarkerClusterGroup>
 
-          {/* ✅ ใส่ปุ่ม ReCenterButton ไว้ใต้ MapContainer */}
-          <div style={{ position: "absolute", bottom: "60px", right: "20px", zIndex: 1000 }}>
+          {/* MapController to get reference to the map */}
+          <MapController />
+
+          <div
+            style={{
+              position: "absolute",
+              bottom: "60px",
+              right: "20px",
+              zIndex: 1000,
+            }}
+          >
             <ReCenterButton position={userPosition} />
           </div>
         </MapContainer>
         {selectedMarker && (
-        <div style={{
-          position: "fixed", bottom: 0, left: 0, width: "100%",
-          backgroundColor: "white", padding: "20px", borderRadius: "20px 20px 0 0",
-          boxShadow: "0px -2px 10px rgba(0, 0, 0, 0.1)"
-        }}>
-          <button onClick={() => setSelectedMarker(null)} style={{ float: "right" }}>✖</button>
-          <h3>{selectedMarker.name}</h3>
-          <p>ชั้น: {selectedMarker.floor}</p>
-          <strong>สิ่งอำนวยความสะดวก:</strong>
-          <ul>
-            <li>ห้องน้ำหญิง: {selectedMarker.features.women ? "✔" : "✘"}</li>
-            <li>ห้องน้ำชาย: {selectedMarker.features.men ? "✔" : "✘"}</li>
-            <li>รองรับผู้พิการ: {selectedMarker.features.accessible ? "✔" : "✘"}</li>
-            <li>สายฉีด: {selectedMarker.features.bidet ? "✔" : "✘"}</li>
-            <li>กระดาษชำระ: {selectedMarker.features.tissue ? "✔" : "✘"}</li>
-            <li>ฟรี: {selectedMarker.features.free ? "✔" : "✘"}</li>
-          </ul>
-          <strong>เวลาทำการ:</strong>
-          <ul>
-            <li>จันทร์: {selectedMarker.hours.monday}</li>
-            <li>อังคาร: {selectedMarker.hours.tuesday}</li>
-            <li>พุธ: {selectedMarker.hours.wednesday}</li>
-            <li>พฤหัส: {selectedMarker.hours.thursday}</li>
-            <li>ศุกร์: {selectedMarker.hours.friday}</li>
-            <li>เสาร์: {selectedMarker.hours.saturday}</li>
-            <li>อาทิตย์: {selectedMarker.hours.sunday}</li>
-          </ul>
-          {selectedMarker.imageUrls.length > 0 && (
-            <img src={selectedMarker.imageUrls[0]} alt="Toilet" style={{ width: "100%", maxHeight: "200px", objectFit: "cover", marginTop: "10px" }} />
-          )}
-        </div>
-      )}
+          <div
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              width: "100%",
+              backgroundColor: "white",
+              padding: "20px",
+              borderRadius: "20px 20px 0 0",
+              boxShadow: "0px -2px 10px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <button
+              onClick={() => setSelectedMarker(null)}
+              style={{ float: "right" }}
+            >
+              ✖
+            </button>
+            <h3>{selectedMarker.name}</h3>
+            <p>ชั้น: {selectedMarker.floor}</p>
+            <strong>สิ่งอำนวยความสะดวก:</strong>
+            <ul>
+              <li>ห้องน้ำหญิง: {selectedMarker.features.women ? "✔" : "✘"}</li>
+              <li>ห้องน้ำชาย: {selectedMarker.features.men ? "✔" : "✘"}</li>
+              <li>
+                รองรับผู้พิการ: {selectedMarker.features.accessible ? "✔" : "✘"}
+              </li>
+              <li>สายฉีด: {selectedMarker.features.bidet ? "✔" : "✘"}</li>
+              <li>กระดาษชำระ: {selectedMarker.features.tissue ? "✔" : "✘"}</li>
+              <li>ฟรี: {selectedMarker.features.free ? "✔" : "✘"}</li>
+            </ul>
+            <strong>เวลาทำการ:</strong>
+            <ul>
+              <li>จันทร์: {selectedMarker.hours.monday}</li>
+              <li>อังคาร: {selectedMarker.hours.tuesday}</li>
+              <li>พุธ: {selectedMarker.hours.wednesday}</li>
+              <li>พฤหัส: {selectedMarker.hours.thursday}</li>
+              <li>ศุกร์: {selectedMarker.hours.friday}</li>
+              <li>เสาร์: {selectedMarker.hours.saturday}</li>
+              <li>อาทิตย์: {selectedMarker.hours.sunday}</li>
+            </ul>
+            {selectedMarker.imageUrls.length > 0 && (
+              <img
+                src={selectedMarker.imageUrls[0]}
+                alt="Toilet"
+                style={{
+                  width: "100%",
+                  maxHeight: "200px",
+                  objectFit: "cover",
+                  marginTop: "10px",
+                }}
+              />
+            )}
+          </div>
+        )}
 
         {showFilter && (
           <FilterPanel
@@ -1207,13 +2761,14 @@ function App() {
 }
 
 const profileButtonStyle = {
-  fontWeight: 'bold',
+  fontWeight: "bold",
   padding: "15px 40px",
   backgroundColor: "#fff",
   color: "#006642",
   border: "2px solid #006642",
   borderRadius: "25px",
   width: "80%",
+  cursor: "pointer"
 };
 
 export default App;
