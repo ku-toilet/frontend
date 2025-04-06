@@ -1,68 +1,70 @@
-import "./App.css";
-import "leaflet/dist/leaflet.css";
-import { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import { Icon } from "leaflet";
-import MarkerClusterGroup from "react-leaflet-cluster";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 import {
-  GoogleOAuthProvider,
   GoogleLogin,
   googleLogout,
-} from "@react-oauth/google";
+  GoogleOAuthProvider
+} from "@react-oauth/google"
+import { Icon } from "leaflet"
+import "leaflet/dist/leaflet.css"
+import { useEffect, useRef, useState } from "react"
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet"
+import MarkerClusterGroup from "react-leaflet-cluster"
+import Slider from "react-slick"
+import "slick-carousel/slick/slick-theme.css"
+import "slick-carousel/slick/slick.css"
+import "./App.css"
 
-const API_URL = "http://localhost:3001";
+const API_URL = "http://localhost:3001"
 
-delete Icon.Default.prototype._getIconUrl;
 Icon.Default.mergeOptions({
   iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
   iconUrl: require("leaflet/dist/images/marker-icon.png"),
-  shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
-});
+  shadowUrl: require("leaflet/dist/images/marker-shadow.png")
+})
 
 const customIcon = new Icon({
   iconUrl: require("./img/location.png"),
-  iconSize: [38, 38],
-});
+  iconSize: [38, 38]
+})
 
 const GPSMarker = ({ setUserPosition }) => {
-  const [position, setPosition] = useState(null);
-  const map = useMap();
+  const [position, setPosition] = useState(null)
+  const map = useMap()
 
   useEffect(() => {
-    map.locate({ setView: true, maxZoom: 16, watch: true });
+    map.locate({ setView: true, maxZoom: 16, watch: true })
     map.on("locationfound", (e) => {
-      setPosition(e.latlng);
-      setUserPosition(e.latlng); // ✅ บันทึกตำแหน่งปัจจุบัน
-    });
-    map.on("locationerror", (e) => console.error("Location error:", e.message));
-  }, [map, setUserPosition]);
+      setPosition(e.latlng)
+      setUserPosition(e.latlng) // ✅ บันทึกตำแหน่งปัจจุบัน
+    })
+    map.on("locationerror", (e) => console.error("Location error:", e.message))
+  }, [map, setUserPosition])
 
   const userIcon = new Icon({
     iconUrl: require("./img/location-me.png"),
-    iconSize: [30, 30],
-  });
+    iconSize: [30, 30]
+  })
 
   return position ? (
-    <Marker position={position} icon={userIcon}>
+    <Marker
+      position={position}
+      icon={userIcon}
+    >
       <Popup>คุณอยู่ที่นี่</Popup>
     </Marker>
-  ) : null;
-};
+  ) : null
+}
 
 const ReCenterButton = ({ position }) => {
-  const map = useMap();
+  const map = useMap()
 
   const handleRecenter = () => {
     if (position) {
-      map.setView(position, 18, { animate: true }); // ✅ ซูมเข้าไปที่ตำแหน่งผู้ใช้
-      map.invalidateSize(); // ✅ แก้บั๊กแผนที่โหลดไม่ครบ
+      map.setView(position, 18, { animate: true }) // ✅ ซูมเข้าไปที่ตำแหน่งผู้ใช้
+      map.invalidateSize() // ✅ แก้บั๊กแผนที่โหลดไม่ครบ
     } else {
-      alert("ไม่พบตำแหน่งของคุณ");
+      alert("ไม่พบตำแหน่งของคุณ")
     }
-  };
+  }
 
   return (
     <button
@@ -77,19 +79,19 @@ const ReCenterButton = ({ position }) => {
         border: "none",
         backgroundColor: "white",
         boxShadow: "0px 4px 10px rgba(0,0,0,0.3)",
-        cursor: "pointer",
+        cursor: "pointer"
       }}
     >
       📍
     </button>
-  );
-};
+  )
+}
 
 function HeaderBar({
   onFilterClick,
   onProfileClick,
   onSearchChange,
-  isLoggedIn,
+  isLoggedIn
 }) {
   return (
     <header
@@ -103,7 +105,7 @@ function HeaderBar({
         position: "fixed",
         top: 0,
         width: "100%",
-        zIndex: 1000,
+        zIndex: 1000
       }}
     >
       <div style={{ display: "flex", alignItems: "center" }}>
@@ -128,7 +130,7 @@ function HeaderBar({
           padding: "5px 10px",
           borderRadius: "5px",
           border: "none",
-          color: "black",
+          color: "black"
         }}
       />
       <button
@@ -138,7 +140,7 @@ function HeaderBar({
           border: "none",
           borderRadius: "5px",
           backgroundColor: "white",
-          color: "#006642",
+          color: "#006642"
         }}
       >
         Filter
@@ -151,51 +153,51 @@ function HeaderBar({
           marginLeft: "10px",
           borderRadius: "50%",
           cursor: "pointer",
-          border: isLoggedIn ? "2px solid #8effb5" : "none", // แสดงขอบสีเขียวเมื่อล็อกอินแล้ว
+          border: isLoggedIn ? "2px solid #8effb5" : "none" // แสดงขอบสีเขียวเมื่อล็อกอินแล้ว
         }}
         onClick={onProfileClick}
       />
     </header>
-  );
+  )
 }
 
 function LoginPage({ onClose, onRegisterClick, onLogin }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user")
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      onLogin(JSON.parse(storedUser).name); // ✅ อัปเดตชื่อผู้ใช้ทันที
+      setUser(JSON.parse(storedUser))
+      onLogin(JSON.parse(storedUser).name) // ✅ อัปเดตชื่อผู้ใช้ทันที
     }
-  }, []);
+  }, [])
 
   const handleSuccess = (credentialResponse) => {
-    console.log("🔹 Google Login Success:", credentialResponse);
+    console.log("🔹 Google Login Success:", credentialResponse)
 
     fetch("http://localhost:3001/auth/google", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: credentialResponse.credential }),
+      body: JSON.stringify({ token: credentialResponse.credential })
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log("🔹 Server Response:", data); // ✅ ตรวจสอบค่าที่เซิร์ฟเวอร์ส่งกลับมา
+        console.log("🔹 Server Response:", data) // ✅ ตรวจสอบค่าที่เซิร์ฟเวอร์ส่งกลับมา
 
         if (data.user) {
-          setUser(data.user);
-          localStorage.setItem("user", JSON.stringify(data.user));
-          onLogin(data.user.name); // ✅ อัปเดตชื่อผู้ใช้
+          setUser(data.user)
+          localStorage.setItem("user", JSON.stringify(data.user))
+          onLogin(data.user.name) // ✅ อัปเดตชื่อผู้ใช้
         } else {
-          alert("Login failed!");
+          alert("Login failed!")
         }
       })
-      .catch((error) => console.error("🔴 Google Auth Error:", error));
-  };
+      .catch((error) => console.error("🔴 Google Auth Error:", error))
+  }
 
   const handleFailure = () => {
-    alert("Google login failed. Please try again.");
-  };
+    alert("Google login failed. Please try again.")
+  }
 
   return (
     <GoogleOAuthProvider clientId="577202715001-pa9pfkmbm44haiocpbpg4ran1rn4f824.apps.googleusercontent.com">
@@ -207,7 +209,7 @@ function LoginPage({ onClose, onRegisterClick, onLogin }) {
           backgroundColor: "white",
           borderRadius: "10px",
           boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
-          textAlign: "center",
+          textAlign: "center"
         }}
       >
         <h3 style={{ fontSize: 24, fontWeight: "bold", marginBottom: "16px" }}>
@@ -220,7 +222,7 @@ function LoginPage({ onClose, onRegisterClick, onLogin }) {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              marginTop: "20px",
+              marginTop: "20px"
             }}
           >
             <GoogleLogin
@@ -237,9 +239,9 @@ function LoginPage({ onClose, onRegisterClick, onLogin }) {
             <p>Email: {user.email}</p>
             <button
               onClick={() => {
-                googleLogout();
-                setUser(null);
-                localStorage.removeItem("user");
+                googleLogout()
+                setUser(null)
+                localStorage.removeItem("user")
               }}
               style={{
                 padding: "10px 20px",
@@ -248,7 +250,7 @@ function LoginPage({ onClose, onRegisterClick, onLogin }) {
                 backgroundColor: "#d9534f",
                 color: "white",
                 border: "none",
-                borderRadius: "5px",
+                borderRadius: "5px"
               }}
             >
               Logout
@@ -257,7 +259,7 @@ function LoginPage({ onClose, onRegisterClick, onLogin }) {
         )}
       </div>
     </GoogleOAuthProvider>
-  );
+  )
 }
 
 function SignUpPage({ onClose, onLoginClick }) {
@@ -270,7 +272,7 @@ function SignUpPage({ onClose, onLoginClick }) {
         backgroundColor: "white",
         borderRadius: "10px",
         boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
-        textAlign: "center",
+        textAlign: "center"
       }}
     >
       <h3 style={{ fontSize: 24, fontWeight: "bold", marginBottom: "16px" }}>
@@ -284,7 +286,7 @@ function SignUpPage({ onClose, onLoginClick }) {
           width: "100%",
           marginBottom: "15px",
           borderRadius: "5px",
-          border: "1px solid #ccc",
+          border: "1px solid #ccc"
         }}
       />
       <input
@@ -295,7 +297,7 @@ function SignUpPage({ onClose, onLoginClick }) {
           width: "100%",
           marginBottom: "15px",
           borderRadius: "5px",
-          border: "1px solid #ccc",
+          border: "1px solid #ccc"
         }}
       />
       <input
@@ -306,7 +308,7 @@ function SignUpPage({ onClose, onLoginClick }) {
           width: "100%",
           marginBottom: "15px",
           borderRadius: "5px",
-          border: "1px solid #ccc",
+          border: "1px solid #ccc"
         }}
       />
       <input
@@ -317,7 +319,7 @@ function SignUpPage({ onClose, onLoginClick }) {
           width: "100%",
           marginBottom: "20px",
           borderRadius: "5px",
-          border: "1px solid #ccc",
+          border: "1px solid #ccc"
         }}
       />
       <button
@@ -327,7 +329,7 @@ function SignUpPage({ onClose, onLoginClick }) {
           backgroundColor: "#006642",
           color: "white",
           border: "none",
-          borderRadius: "5px",
+          borderRadius: "5px"
         }}
       >
         Register
@@ -345,7 +347,7 @@ function SignUpPage({ onClose, onLoginClick }) {
         </span>
       </div>
     </div>
-  );
+  )
 }
 
 function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
@@ -356,9 +358,9 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
       accessible: false,
       bidet: false,
       tissue: false,
-      free: false,
-    });
-  };
+      free: false
+    })
+  }
 
   return (
     <div
@@ -370,7 +372,7 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
         backgroundColor: "white",
         padding: "20px",
         boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.1)",
-        zIndex: 1000,
+        zIndex: 1000
       }}
     >
       <h3 style={{ fontSize: 24, fontWeight: "bold", marginBottom: "16px" }}>
@@ -383,7 +385,7 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
+          marginBottom: "12px"
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -410,7 +412,7 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
+          marginBottom: "12px"
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -435,7 +437,7 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
+          marginBottom: "12px"
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -462,7 +464,7 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
+          marginBottom: "12px"
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -489,7 +491,7 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
+          marginBottom: "12px"
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -516,7 +518,7 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "12px",
+          marginBottom: "12px"
         }}
       >
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -540,7 +542,7 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
           display: "flex",
           justifyContent: "center",
           gap: "20px",
-          marginTop: "20px",
+          marginTop: "20px"
         }}
       >
         <button
@@ -550,63 +552,72 @@ function FilterPanel({ onClose, filters, setFilters, applyFilters }) {
             border: "1px solid #006642",
             color: "#006642",
             padding: "10px",
-            borderRadius: "15px",
+            borderRadius: "15px"
           }}
         >
           Clear
         </button>
         <button
           onClick={() => {
-            applyFilters();
-            onClose(); // ✅ ปิดหน้า Filter หลังจากกด Done
+            applyFilters()
+            onClose() // ✅ ปิดหน้า Filter หลังจากกด Done
           }}
           style={{
             backgroundColor: "#006642",
             color: "white",
             padding: "10px",
-            borderRadius: "15px",
+            borderRadius: "15px"
           }}
         >
           Done
         </button>
       </div>
     </div>
-  );
+  )
 }
 
-function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, commentsByLocation, setCommentsByLocation, NO_IMAGE_URL }) {
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [showLoginAlert, setShowLoginAlert] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); // เพิ่ม state สำหรับแสดงสถานะกำลังบันทึก
+function BottomSheet({
+  data,
+  onClose,
+  loggedIn,
+  setShowLogin,
+  username,
+  commentsByLocation,
+  setCommentsByLocation,
+  NO_IMAGE_URL
+}) {
+  const [rating, setRating] = useState(0)
+  const [comment, setComment] = useState("")
+  const [showLoginAlert, setShowLoginAlert] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false) // เพิ่ม state สำหรับแสดงสถานะกำลังบันทึก
 
   // state สำหรับการจัดการรูปภาพ
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
 
   // อ้างอิงไปยัง input file
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef(null)
 
   // ดึงข้อมูล user จาก localStorage
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user")
     if (storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
+        const parsedUser = JSON.parse(storedUser)
+        setUser(parsedUser)
       } catch (error) {
-        console.error("❌ ไม่สามารถแปลงข้อมูลผู้ใช้ได้:", error);
+        console.error("❌ ไม่สามารถแปลงข้อมูลผู้ใช้ได้:", error)
       }
     }
-  }, []);
+  }, [])
 
-  if (!data) return null;
+  if (!data) return null
 
-  const comments = commentsByLocation[data.name] || [];
-  const features = data.features;
-  const hours = data.hours;
+  const comments = commentsByLocation[data.name] || []
+  const features = data.features
+  const hours = data.hours
 
   const settings = {
     dots: true,
@@ -614,51 +625,51 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
     speed: 500,
     slidesToShow: 1,
     slidesToScroll: 1,
-    arrows: true,
-  };
+    arrows: true
+  }
 
   const handleRatingClick = (value) => {
     if (!loggedIn) {
-      setShowLoginAlert(true);
-      return;
+      setShowLoginAlert(true)
+      return
     }
-    setRating(value);
-  };
+    setRating(value)
+  }
 
   const handleImageChange = (e) => {
     if (!loggedIn) {
-      setShowLoginAlert(true);
-      return;
+      setShowLoginAlert(true)
+      return
     }
 
-    const file = e.target.files[0];
+    const file = e.target.files[0]
     if (file) {
-      setSelectedImage(file);
+      setSelectedImage(file)
 
       // สร้าง URL สำหรับแสดงตัวอย่างรูปภาพ
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
+      const previewUrl = URL.createObjectURL(file)
+      setImagePreview(previewUrl)
     }
-  };
+  }
 
   const handleImageButtonClick = () => {
     if (!loggedIn) {
-      setShowLoginAlert(true);
-      return;
+      setShowLoginAlert(true)
+      return
     }
-    fileInputRef.current.click();
-  };
+    fileInputRef.current.click()
+  }
 
   const handleClearImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
+    setSelectedImage(null)
+    setImagePreview(null)
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = ""
     }
-  };
+  }
 
   const handleCommentSubmit = () => {
-    console.log("🔹 กำลังบันทึกความคิดเห็น...");
+    console.log("🔹 กำลังบันทึกความคิดเห็น...")
     console.log("🔹 ข้อมูล: ", {
       loggedIn,
       username: username || "ไม่ระบุชื่อผู้ใช้",
@@ -666,104 +677,118 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
       rating,
       selectedImage: selectedImage ? "มีรูปภาพ" : "ไม่มีรูปภาพ",
       data: data || "ไม่มีข้อมูล"
-    });
+    })
 
     if (!loggedIn || !user) {
-      console.error("🔴 User is not logged in!");
-      setShowLoginAlert(true);
-      return;
+      console.error("🔴 User is not logged in!")
+      setShowLoginAlert(true)
+      return
     }
 
     // ตรวจสอบว่ามีการให้คะแนนหรือไม่
     if (rating === 0) {
-      alert("กรุณาให้คะแนนก่อนบันทึกความคิดเห็น");
-      return;
+      alert("กรุณาให้คะแนนก่อนบันทึกความคิดเห็น")
+      return
     }
 
     // ตรวจสอบว่ามีการเขียนความคิดเห็นหรือไม่
     if (comment.trim() === "") {
-      alert("กรุณาเขียนความคิดเห็นก่อนบันทึก");
-      return;
+      alert("กรุณาเขียนความคิดเห็นก่อนบันทึก")
+      return
     }
 
     // ตรวจสอบว่ามี data และ data.id หรือไม่
     if (!data || !data.id) {
-      console.error("🔴 ไม่พบข้อมูล restroom_id");
-      alert("เกิดข้อผิดพลาดในการบันทึกความคิดเห็น: ไม่พบข้อมูลห้องน้ำ");
-      return;
+      console.error("🔴 ไม่พบข้อมูล restroom_id")
+      alert("เกิดข้อผิดพลาดในการบันทึกความคิดเห็น: ไม่พบข้อมูลห้องน้ำ")
+      return
     }
 
     // ตรวจสอบว่ามี user_id หรือไม่
     if (!user.user_id) {
-      console.error("🔴 ไม่พบข้อมูล user_id");
-      alert("เกิดข้อผิดพลาดในการบันทึกความคิดเห็น: ไม่พบข้อมูลผู้ใช้");
-      return;
+      console.error("🔴 ไม่พบข้อมูล user_id")
+      alert("เกิดข้อผิดพลาดในการบันทึกความคิดเห็น: ไม่พบข้อมูลผู้ใช้")
+      return
     }
 
     // แสดงสถานะ loading
-    setIsSubmitting(true);
+    setIsSubmitting(true)
 
     try {
       // สร้าง FormData สำหรับส่งข้อมูลและรูปภาพ
-      const formData = new FormData();
-      formData.append("restroom_id", data.id);
-      formData.append("user_id", user.user_id);
-      formData.append("rating", rating);
-      formData.append("comment", comment);
+      const formData = new FormData()
+      formData.append("restroom_id", data.id)
+      formData.append("user_id", user.user_id)
+      formData.append("rating", rating)
+      formData.append("comment", comment)
 
       // แสดงรายละเอียด FormData ใน console
-      console.log("🔹 FormData entries:");
+      console.log("🔹 FormData entries:")
       for (let [key, value] of formData.entries()) {
-        console.log(`   ${key}: ${value}`);
+        console.log(`   ${key}: ${value}`)
       }
 
       // ถ้ามีรูปภาพ ให้แนบไปด้วย
       if (selectedImage) {
-        console.log("🔹 กำลังเพิ่มรูปภาพ:", selectedImage.name, "ขนาด:", selectedImage.size, "bytes");
-        formData.append("photo", selectedImage);
+        console.log(
+          "🔹 กำลังเพิ่มรูปภาพ:",
+          selectedImage.name,
+          "ขนาด:",
+          selectedImage.size,
+          "bytes"
+        )
+        formData.append("photo", selectedImage)
 
         // ตรวจสอบว่ารูปภาพมีขนาดใหญ่เกินไปหรือไม่
-        if (selectedImage.size > 5 * 1024 * 1024) { // 5MB
-          alert("รูปภาพมีขนาดใหญ่เกินไป กรุณาใช้รูปภาพที่มีขนาดไม่เกิน 5MB");
-          setIsSubmitting(false);
-          return;
+        if (selectedImage.size > 5 * 1024 * 1024) {
+          // 5MB
+          alert("รูปภาพมีขนาดใหญ่เกินไป กรุณาใช้รูปภาพที่มีขนาดไม่เกิน 5MB")
+          setIsSubmitting(false)
+          return
         }
       }
 
       // ทดลองใช้วิธี base64 แทนถ้าการอัปโหลดไฟล์ไม่ทำงาน
       if (selectedImage && window.FileReader) {
-        const reader = new FileReader();
+        const reader = new FileReader()
         reader.onload = function (e) {
-          const base64data = e.target.result;
-          sendReviewWithBase64(formData, base64data);
-        };
-        reader.readAsDataURL(selectedImage);
+          const base64data = e.target.result
+          sendReviewWithBase64(formData, base64data)
+        }
+        reader.readAsDataURL(selectedImage)
       } else {
         // ส่งข้อมูลไปยัง API แบบปกติ
-        sendReviewData(formData);
+        sendReviewData(formData)
       }
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการสร้าง FormData:", error);
-      alert("เกิดข้อผิดพลาดในการเตรียมข้อมูล กรุณาลองใหม่อีกครั้ง");
-      setIsSubmitting(false);
+      console.error("❌ เกิดข้อผิดพลาดในการสร้าง FormData:", error)
+      alert("เกิดข้อผิดพลาดในการเตรียมข้อมูล กรุณาลองใหม่อีกครั้ง")
+      setIsSubmitting(false)
     }
-  };
+  }
 
   // ฟังก์ชันสำหรับส่งรีวิวพร้อมรูปภาพแบบ base64
   const sendReviewWithBase64 = (formData, base64Image) => {
     try {
-      console.log("🔶 API_URL:", API_URL);
-      console.log("🔶 Full URL for review submission:", `${API_URL}/review/base64`);
+      console.log("🔶 API_URL:", API_URL)
+      console.log(
+        "🔶 Full URL for review submission:",
+        `${API_URL}/review/base64`
+      )
 
       // ต้องแน่ใจว่า formData มีข้อมูลที่จำเป็นครบถ้วน
-      if (!formData.get("restroom_id") || !formData.get("user_id") || !formData.get("rating")) {
-        throw new Error("Missing required data");
+      if (
+        !formData.get("restroom_id") ||
+        !formData.get("user_id") ||
+        !formData.get("rating")
+      ) {
+        throw new Error("Missing required data")
       }
 
       // แยกข้อมูล base64 ออกจาก header (เช่น data:image/jpeg;base64,)
-      let base64String = base64Image;
-      if (base64Image.includes(';base64,')) {
-        base64String = base64Image.split(';base64,')[1];
+      let base64String = base64Image
+      if (base64Image.includes(";base64,")) {
+        base64String = base64Image.split(";base64,")[1]
       }
 
       // สร้างข้อมูลที่จะส่ง
@@ -773,7 +798,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         rating: formData.get("rating"),
         comment: formData.get("comment") || "",
         photo_base64: base64String
-      };
+      }
 
       // แสดง log ข้อมูลที่จะส่ง
       console.log("🔹 Sending review data:", {
@@ -781,11 +806,13 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         user_id: reviewData.user_id,
         rating: reviewData.rating,
         comment: reviewData.comment,
-        photo_base64_length: reviewData.photo_base64 ? reviewData.photo_base64.length : 0
-      });
+        photo_base64_length: reviewData.photo_base64
+          ? reviewData.photo_base64.length
+          : 0
+      })
 
       // ทดสอบส่งข้อมูลไปยัง endpoint ทดสอบก่อน
-      console.log("🔹 ทดสอบส่งข้อมูลไปยัง /test-base64 ก่อน...");
+      console.log("🔹 ทดสอบส่งข้อมูลไปยัง /test-base64 ก่อน...")
       fetch(`${API_URL}/test-base64`, {
         method: "POST",
         headers: {
@@ -796,77 +823,91 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
           timestamp: new Date().toISOString()
         })
       })
-        .then(response => {
-          console.log("🔹 ผลการทดสอบ /test-base64:", response.status, response.statusText);
+        .then((response) => {
+          console.log(
+            "🔹 ผลการทดสอบ /test-base64:",
+            response.status,
+            response.statusText
+          )
           if (!response.ok) {
-            console.error("⚠️ Test endpoint failed, but continuing with actual request");
+            console.error(
+              "⚠️ Test endpoint failed, but continuing with actual request"
+            )
           }
 
           // ส่งข้อมูลไปยัง API จริง
-          console.log("🔹 กำลังส่งข้อมูลไปยัง /review/base64...");
+          console.log("🔹 กำลังส่งข้อมูลไปยัง /review/base64...")
           return fetch(`${API_URL}/review/base64`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json"
             },
             body: JSON.stringify(reviewData)
-          });
+          })
         })
-        .then(response => {
+        .then((response) => {
           // ตรวจสอบสถานะ response
-          console.log("🔹 สถานะการส่งข้อมูล:", response.status, response.statusText);
+          console.log(
+            "🔹 สถานะการส่งข้อมูล:",
+            response.status,
+            response.statusText
+          )
           if (!response.ok) {
             // ถ้ามี error ให้อ่านข้อความ error ก่อน
-            return response.text().then(text => {
-              console.error("❌ Server error response:", text);
-              throw new Error(`Server responded with status: ${response.status}. ${text}`);
-            });
+            return response.text().then((text) => {
+              console.error("❌ Server error response:", text)
+              throw new Error(
+                `Server responded with status: ${response.status}. ${text}`
+              )
+            })
           }
-          return response.json();
+          return response.json()
         })
-        .then(data => {
-          console.log("✅ Review submission successful:", data);
+        .then((data) => {
+          console.log("✅ Review submission successful:", data)
           // เรียกฟังก์ชันสำหรับจัดการความสำเร็จ
-          handleResponse(data);
+          handleResponse(data)
         })
-        .catch(error => {
-          console.error("❌ Error in review submission:", error);
+        .catch((error) => {
+          console.error("❌ Error in review submission:", error)
 
           // แสดงข้อมูลเพิ่มเติมเกี่ยวกับ error
           console.error("Error details:", {
             message: error.message,
             name: error.name,
             stack: error.stack
-          });
+          })
 
           // ถ้าส่งข้อมูลไปยัง /review/base64 ไม่สำเร็จ ให้ลองส่งผ่าน /review แทน
-          console.log("🔸 ลองส่งข้อมูลผ่าน /review แทน...");
+          console.log("🔸 ลองส่งข้อมูลผ่าน /review แทน...")
 
           // สร้าง FormData ใหม่
-          const alternativeFormData = new FormData();
-          alternativeFormData.append("restroom_id", reviewData.restroom_id);
-          alternativeFormData.append("user_id", reviewData.user_id);
-          alternativeFormData.append("rating", reviewData.rating);
-          alternativeFormData.append("comment", reviewData.comment);
+          const alternativeFormData = new FormData()
+          alternativeFormData.append("restroom_id", reviewData.restroom_id)
+          alternativeFormData.append("user_id", reviewData.user_id)
+          alternativeFormData.append("rating", reviewData.rating)
+          alternativeFormData.append("comment", reviewData.comment)
 
           // แปลงรูปภาพ base64 กลับเป็นไฟล์ (ถ้าทำได้)
-          if (base64Image && base64Image.includes(';base64,')) {
+          if (base64Image && base64Image.includes(";base64,")) {
             try {
-              const contentType = base64Image.split(';')[0].split(':')[1];
-              const byteCharacters = atob(base64Image.split(',')[1]);
-              const byteArrays = [];
+              const contentType = base64Image.split(";")[0].split(":")[1]
+              const byteCharacters = atob(base64Image.split(",")[1])
+              const byteArrays = []
 
               for (let i = 0; i < byteCharacters.length; i++) {
-                byteArrays.push(byteCharacters.charCodeAt(i));
+                byteArrays.push(byteCharacters.charCodeAt(i))
               }
 
-              const byteArray = new Uint8Array(byteArrays);
-              const blob = new Blob([byteArray], { type: contentType });
-              const file = new File([blob], "review_image.jpg", { type: contentType });
+              const byteArray = new Uint8Array(byteArrays)
+              const blob = new Blob([byteArray], { type: contentType })
+              const file = new File([blob], "review_image.jpg", {
+                type: contentType
+              })
 
-              alternativeFormData.append("photo", file);
+              alternativeFormData.append("photo", file)
             } catch (e) {
-              console.error("❌ ไม่สามารถแปลง base64 เป็นไฟล์ได้:", e);
+              console.error("❌ ไม่สามารถแปลง base64 เป็นไฟล์ได้:", e)
             }
           }
 
@@ -874,49 +915,64 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             method: "POST",
             body: alternativeFormData
           })
-            .then(response => {
-              console.log("🔹 สถานะการส่งข้อมูลผ่าน /review:", response.status, response.statusText);
+            .then((response) => {
+              console.log(
+                "🔹 สถานะการส่งข้อมูลผ่าน /review:",
+                response.status,
+                response.statusText
+              )
               if (!response.ok) {
-                return response.text().then(text => {
-                  throw new Error(`Alternative endpoint failed: ${response.status}. ${text}`);
-                });
+                return response.text().then((text) => {
+                  throw new Error(
+                    `Alternative endpoint failed: ${response.status}. ${text}`
+                  )
+                })
               }
-              return response.json();
+              return response.json()
             })
-            .then(data => {
-              console.log("✅ Review submission via alternative endpoint successful:", data);
-              handleResponse(data);
+            .then((data) => {
+              console.log(
+                "✅ Review submission via alternative endpoint successful:",
+                data
+              )
+              handleResponse(data)
             })
-            .catch(altError => {
-              console.error("❌ Alternative endpoint also failed:", altError);
+            .catch((altError) => {
+              console.error("❌ Alternative endpoint also failed:", altError)
               // เรียกฟังก์ชันสำหรับจัดการข้อผิดพลาด
-              handleError(error); // ใช้ error เดิม เพราะนั่นคือ error หลัก
-            });
-        });
+              handleError(error) // ใช้ error เดิม เพราะนั่นคือ error หลัก
+            })
+        })
     } catch (error) {
-      console.error("❌ Error preparing review data:", error);
-      handleError(error);
+      console.error("❌ Error preparing review data:", error)
+      handleError(error)
     }
-  };
+  }
 
   const sendReviewData = (formData) => {
-    console.log("🔹 ส่งข้อมูลแบบ FormData");
+    console.log("🔹 ส่งข้อมูลแบบ FormData")
 
     fetch(`${API_URL}/review`, {
       method: "POST",
-      body: formData,
+      body: formData
     })
-      .then(response => {
-        console.log("🔹 สถานะการส่งข้อมูล:", response.status, response.statusText);
+      .then((response) => {
+        console.log(
+          "🔹 สถานะการส่งข้อมูล:",
+          response.status,
+          response.statusText
+        )
         if (!response.ok) {
-          return response.text().then(text => {
-            throw new Error(`Server responded with status: ${response.status}. ${text}`);
-          });
+          return response.text().then((text) => {
+            throw new Error(
+              `Server responded with status: ${response.status}. ${text}`
+            )
+          })
         }
-        return response.json();
+        return response.json()
       })
-      .then(data => {
-        console.log("✅ บันทึกความคิดเห็นสำเร็จ:", data);
+      .then((data) => {
+        console.log("✅ บันทึกความคิดเห็นสำเร็จ:", data)
 
         // สร้างข้อมูลความคิดเห็นใหม่
         const newComment = {
@@ -925,32 +981,32 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
           rating: rating,
           date: new Date().toLocaleDateString("en-GB"),
           image: data.photo_url || null
-        };
+        }
 
         // อัปเดตข้อมูลความคิดเห็น
         setCommentsByLocation((prevComments) => ({
           ...prevComments,
-          [data.name]: [...(prevComments[data.name] || []), newComment],
-        }));
+          [data.name]: [...(prevComments[data.name] || []), newComment]
+        }))
 
-        alert("บันทึกความคิดเห็นสำเร็จ!");
-        setComment("");
-        setRating(0);
-        handleClearImage();
-        setIsSubmitting(false);
+        alert("บันทึกความคิดเห็นสำเร็จ!")
+        setComment("")
+        setRating(0)
+        handleClearImage()
+        setIsSubmitting(false)
       })
-      .catch(handleError);
-  };
+      .catch(handleError)
+  }
   // ฟังก์ชันจัดการ response
   const handleResponse = (data) => {
     // ตรวจสอบว่าเป็น Response object หรือไม่
-    if (data && typeof data.json === 'function') {
-      return data.json().then(result => {
+    if (data && typeof data.json === "function") {
+      return data.json().then((result) => {
         // ดำเนินการกับข้อมูล result ต่อไป
-      });
+      })
     } else {
       // ถ้าไม่ใช่ Response object ให้ใช้ข้อมูลนั้นเลย
-      console.log("✅ บันทึกความคิดเห็นสำเร็จ:", data);
+      console.log("✅ บันทึกความคิดเห็นสำเร็จ:", data)
 
       // สร้างข้อมูลความคิดเห็นใหม่และแสดงผล
       const newComment = {
@@ -959,72 +1015,123 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         rating: rating,
         date: new Date().toLocaleDateString("en-GB"),
         image: data.photo_url || null
-      };
+      }
 
       // อัปเดตและแสดงข้อมูล
       setCommentsByLocation((prevComments) => ({
         ...prevComments,
-        [data.name]: [...(prevComments[data.name] || []), newComment],
-      }));
+        [data.name]: [...(prevComments[data.name] || []), newComment]
+      }))
 
-      alert("บันทึกความคิดเห็นสำเร็จ!");
-      setComment("");
-      setRating(0);
-      handleClearImage();
-      setIsSubmitting(false);
+      alert("บันทึกความคิดเห็นสำเร็จ!")
+      setComment("")
+      setRating(0)
+      handleClearImage()
+      setIsSubmitting(false)
     }
-  };
+  }
 
   // ฟังก์ชันจัดการข้อผิดพลาด
   // แก้ไขใน handleError ใน src/App.js
   const handleError = (error) => {
-    console.error("❌ เกิดข้อผิดพลาดในการบันทึกความคิดเห็น:", error);
+    console.error("❌ เกิดข้อผิดพลาดในการบันทึกความคิดเห็น:", error)
 
     // แสดงข้อความแจ้งเตือนที่เฉพาะเจาะจงมากขึ้น
-    let errorMessage = "เกิดข้อผิดพลาดในการบันทึกความคิดเห็น กรุณาลองใหม่อีกครั้ง";
+    let errorMessage =
+      "เกิดข้อผิดพลาดในการบันทึกความคิดเห็น กรุณาลองใหม่อีกครั้ง"
 
     if (error.message) {
       if (error.message.includes("undefined")) {
-        errorMessage = "ไม่สามารถติดต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่อ";
+        errorMessage =
+          "ไม่สามารถติดต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่อ"
       } else {
-        errorMessage = error.message;
+        errorMessage = error.message
       }
     }
 
-    alert(errorMessage);
-    setIsSubmitting(false);
-  };
+    alert(errorMessage)
+    setIsSubmitting(false)
+  }
+
+  const DriveImage = ({ driveId, index, fallbackUrl }) => {
+    const [hasError, setHasError] = useState(false)
+
+    // Format Google Drive URL correctly for image embedding
+    const formattedUrl = driveId
+      ? `https://lh3.googleusercontent.com/d/${driveId}`
+      : fallbackUrl
+
+    return (
+      <img
+        src={hasError ? fallbackUrl : formattedUrl}
+        alt={`Image ${index + 1}`}
+        style={{
+          width: "100%",
+          maxWidth: "600px",
+          height: "auto",
+          maxHeight: "300px",
+          objectFit: "contain",
+          borderRadius: "10px",
+          border: "1px solid #ddd",
+          padding: "5px"
+        }}
+        onError={(e) => {
+          console.log("🚀 ~ DriveImage ~ formattedUrl:", formattedUrl)
+          console.error(`❌ Error loading image: ${driveId}`)
+          setHasError(true)
+        }}
+      />
+    )
+  }
+
+  const extractDriveId = (url) => {
+    // Handle full Google Drive links
+    if (typeof url === "string" && url.includes("drive.google.com")) {
+      const idMatch = url.match(/[\/?]d\/([^\/]+)/)
+      if (idMatch && idMatch[1]) return idMatch[1]
+
+      const idParam = url.match(/[?&]id=([^&]+)/)
+      if (idParam && idParam[1]) return idParam[1]
+    }
+
+    // If already an ID or can't extract
+    return url
+  }
 
   return (
-    <div style={{
-      position: "fixed",
-      bottom: 0,
-      left: 0,
-      width: "100vw",
-      maxHeight: "50vh",
-      backgroundColor: "white",
-      borderRadius: "20px 20px 0 0",
-      boxShadow: "0px -2px 10px rgba(0, 0, 0, 0.1)",
-      zIndex: 1000,
-      overflowY: "auto",
-      padding: "20px",
-    }}>
+    <div
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        width: "100vw",
+        maxHeight: "50vh",
+        backgroundColor: "white",
+        borderRadius: "20px 20px 0 0",
+        boxShadow: "0px -2px 10px rgba(0, 0, 0, 0.1)",
+        zIndex: 1000,
+        overflowY: "auto",
+        padding: "20px"
+      }}
+    >
       {/* Login Alert Modal */}
       {showLoginAlert && (
-        <div style={{
-          position: "fixed",
-          top: "30%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          backgroundColor: "white",
-          padding: "20px",
-          borderRadius: "15px",
-          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
-          textAlign: "center",
-          zIndex: 2000,
-          width: "320px",
-          border: "2px solid rgba(0, 0, 0, 0.1)"
-        }}>
+        <div
+          style={{
+            position: "fixed",
+            top: "30%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            backgroundColor: "white",
+            padding: "20px",
+            borderRadius: "15px",
+            boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
+            textAlign: "center",
+            zIndex: 2000,
+            width: "320px",
+            border: "2px solid rgba(0, 0, 0, 0.1)"
+          }}
+        >
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button
               onClick={() => setShowLoginAlert(false)}
@@ -1032,7 +1139,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
                 background: "none",
                 border: "none",
                 fontSize: "20px",
-                cursor: "pointer",
+                cursor: "pointer"
               }}
             >
               ✖
@@ -1043,9 +1150,9 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
           </p>
           <button
             onClick={() => {
-              setShowLoginAlert(false);
-              setShowLogin(true);
-              onClose();
+              setShowLoginAlert(false)
+              setShowLogin(true)
+              onClose()
             }}
             style={{
               marginTop: "15px",
@@ -1056,7 +1163,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
               borderRadius: "20px",
               fontWeight: "bold",
               fontSize: "16px",
-              width: "30%",
+              width: "30%"
             }}
           >
             Got it
@@ -1074,7 +1181,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
           display: "flex",
           justifyContent: "center",
           zIndex: 1000,
-          marginTop: "-20px",
+          marginTop: "-20px"
         }}
       >
         <button
@@ -1089,7 +1196,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             justifyContent: "center",
             alignItems: "center",
             fontSize: "24px",
-            cursor: "pointer",
+            cursor: "pointer"
           }}
         >
           ▼
@@ -1101,7 +1208,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: "center"
         }}
       >
         <h3 style={{ fontWeight: "bold" }}>{data.name}</h3>
@@ -1122,7 +1229,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             style={{
               display: "flex",
               justifyContent: "space-between",
-              width: "100%",
+              width: "100%"
             }}
           >
             Women's restroom{" "}
@@ -1134,7 +1241,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             style={{
               display: "flex",
               justifyContent: "space-between",
-              width: "100%",
+              width: "100%"
             }}
           >
             Men's restroom{" "}
@@ -1146,7 +1253,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             style={{
               display: "flex",
               justifyContent: "space-between",
-              width: "100%",
+              width: "100%"
             }}
           >
             Accessible restroom{" "}
@@ -1158,7 +1265,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             style={{
               display: "flex",
               justifyContent: "space-between",
-              width: "100%",
+              width: "100%"
             }}
           >
             Bidet{" "}
@@ -1170,7 +1277,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             style={{
               display: "flex",
               justifyContent: "space-between",
-              width: "100%",
+              width: "100%"
             }}
           >
             Tissue available{" "}
@@ -1182,7 +1289,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             style={{
               display: "flex",
               justifyContent: "space-between",
-              width: "100%",
+              width: "100%"
             }}
           >
             Free to use{" "}
@@ -1204,7 +1311,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                width: "100%",
+                width: "100%"
               }}
             >
               <span>{day.charAt(0).toUpperCase() + day.slice(1)}:</span>
@@ -1225,26 +1332,13 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
                 style={{
                   display: "flex",
                   justifyContent: "center",
-                  alignItems: "center",
+                  alignItems: "center"
                 }}
               >
-                <img
-                  src={image}
-                  alt={`Image ${index + 1}`}
-                  style={{
-                    width: "100%",
-                    maxWidth: "600px",
-                    height: "auto",
-                    maxHeight: "300px",
-                    objectFit: "contain",
-                    borderRadius: "10px",
-                    border: "1px solid #ddd",
-                    padding: "5px",
-                  }}
-                  onError={(e) => {
-                    console.error(`❌ Error loading image: ${image}`);
-                    e.target.src = NO_IMAGE_URL;
-                  }}
+                <DriveImage
+                  driveId={extractDriveId(image)}
+                  index={index}
+                  fallbackUrl={NO_IMAGE_URL}
                 />
               </div>
             ))}
@@ -1264,7 +1358,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
               onClick={() => handleRatingClick(star)}
               style={{
                 color: star <= rating ? "#FFD700" : "#ccc",
-                marginRight: "5px",
+                marginRight: "5px"
               }}
             >
               ★
@@ -1284,7 +1378,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
           marginTop: "10px",
           padding: "10px",
           borderRadius: "5px",
-          border: "1px solid #ccc",
+          border: "1px solid #ccc"
         }}
       />
 
@@ -1302,7 +1396,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
           style={{
             display: "flex",
             justifyContent: "space-between",
-            gap: "10px",
+            gap: "10px"
           }}
         >
           <button
@@ -1315,7 +1409,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
               borderRadius: "5px",
               display: "flex",
               alignItems: "center",
-              gap: "5px",
+              gap: "5px"
             }}
           >
             📷 เพิ่มรูปภาพ
@@ -1329,7 +1423,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
                 backgroundColor: "#fff0f0",
                 color: "#d9534f",
                 border: "1px solid #d9534f",
-                borderRadius: "5px",
+                borderRadius: "5px"
               }}
             >
               ❌ ยกเลิก
@@ -1348,7 +1442,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
                 maxHeight: "200px",
                 objectFit: "contain",
                 borderRadius: "5px",
-                border: "1px solid #ddd",
+                border: "1px solid #ddd"
               }}
             />
           </div>
@@ -1367,7 +1461,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
           border: "none",
           borderRadius: "5px",
           width: "100%",
-          cursor: isSubmitting ? "wait" : "pointer",
+          cursor: isSubmitting ? "wait" : "pointer"
         }}
       >
         {isSubmitting ? "กำลังบันทึก..." : "Submit"}
@@ -1382,7 +1476,7 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
             style={{
               marginTop: "10px",
               borderBottom: "1px solid #ccc",
-              paddingBottom: "5px",
+              paddingBottom: "5px"
             }}
           >
             <strong>{c.username}</strong>
@@ -1401,11 +1495,11 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
                     maxWidth: "100%",
                     maxHeight: "200px",
                     borderRadius: "5px",
-                    cursor: "pointer",
+                    cursor: "pointer"
                   }}
                   onClick={() => {
                     // สามารถเพิ่มฟังก์ชันเปิดรูปภาพแบบเต็มจอได้ตรงนี้
-                    window.open(c.image, "_blank");
+                    window.open(c.image, "_blank")
                   }}
                 />
               </div>
@@ -1416,59 +1510,59 @@ function BottomSheet({ data, onClose, loggedIn, setShowLogin, username, comments
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 function MyReviewsPage({ onClose, username, commentsByLocation }) {
-  const [userReviews, setUserReviews] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [userReviews, setUserReviews] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
 
   // Function to fetch user's reviews from the API
   useEffect(() => {
     const fetchUserReviews = async () => {
-      setIsLoading(true);
+      setIsLoading(true)
       try {
         // Get user ID from localStorage
-        const storedUser = localStorage.getItem("user");
+        const storedUser = localStorage.getItem("user")
         if (!storedUser) {
-          setUserReviews([]);
-          setIsLoading(false);
-          return;
+          setUserReviews([])
+          setIsLoading(false)
+          return
         }
 
-        const user = JSON.parse(storedUser);
-        const userId = user.user_id;
+        const user = JSON.parse(storedUser)
+        const userId = user.user_id
 
         // Fetch user's reviews from API
-        const response = await fetch(`${API_URL}/reviews/user/${userId}`);
+        const response = await fetch(`${API_URL}/reviews/user/${userId}`)
         if (!response.ok) {
-          throw new Error(`API responded with status: ${response.status}`);
+          throw new Error(`API responded with status: ${response.status}`)
         }
 
-        const reviewData = await response.json();
-        console.log("🔹 ดึงข้อมูลรีวิวของผู้ใช้สำเร็จ:", reviewData);
+        const reviewData = await response.json()
+        console.log("🔹 ดึงข้อมูลรีวิวของผู้ใช้สำเร็จ:", reviewData)
 
         // Format the reviews for display
-        const formattedReviews = reviewData.map(item => ({
+        const formattedReviews = reviewData.map((item) => ({
           id: item.review_id,
           location: item.building_name,
           floor: item.floor || "ไม่ระบุ",
           rating: item.rating,
           comment: item.comment,
-          date: new Date(item.created_at).toLocaleDateString('th-TH'),
+          date: new Date(item.created_at).toLocaleDateString("th-TH"),
           imageUrl: item.photo_url || null
-        }));
+        }))
 
-        setUserReviews(formattedReviews);
+        setUserReviews(formattedReviews)
       } catch (error) {
-        console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลรีวิว:", error);
+        console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลรีวิว:", error)
 
         // Fallback: Filter reviews from existing commentsByLocation data
-        console.log("🔶 ใช้ข้อมูลสำรองจาก commentsByLocation");
-        const allUserReviews = [];
+        console.log("🔶 ใช้ข้อมูลสำรองจาก commentsByLocation")
+        const allUserReviews = []
 
         Object.entries(commentsByLocation).forEach(([location, comments]) => {
-          comments.forEach(comment => {
+          comments.forEach((comment) => {
             if (comment.username === username) {
               allUserReviews.push({
                 location: location,
@@ -1477,19 +1571,19 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
                 comment: comment.text,
                 date: comment.date,
                 imageUrl: comment.image || null
-              });
+              })
             }
-          });
-        });
+          })
+        })
 
-        setUserReviews(allUserReviews);
+        setUserReviews(allUserReviews)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchUserReviews();
-  }, [username, commentsByLocation]);
+    fetchUserReviews()
+  }, [username, commentsByLocation])
 
   return (
     <div
@@ -1502,20 +1596,24 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
         backgroundColor: "white",
         zIndex: 1001,
         padding: "20px",
-        overflowY: "auto",
+        overflowY: "auto"
       }}
     >
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "20px"
-      }}>
-        <h2 style={{
-          fontSize: "24px",
-          fontWeight: "bold",
-          margin: 0
-        }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px"
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: "bold",
+            margin: 0
+          }}
+        >
           รีวิวของฉัน
         </h2>
         <button
@@ -1524,7 +1622,7 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
             background: "none",
             border: "none",
             fontSize: "24px",
-            cursor: "pointer",
+            cursor: "pointer"
           }}
         >
           ✖
@@ -1536,11 +1634,13 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
           <p>กำลังโหลดข้อมูล...</p>
         </div>
       ) : userReviews.length === 0 ? (
-        <div style={{
-          textAlign: "center",
-          padding: "40px 0",
-          color: "#666"
-        }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "40px 0",
+            color: "#666"
+          }}
+        >
           <p>คุณยังไม่มีรีวิว</p>
           <p>เมื่อคุณรีวิวห้องน้ำ รายการจะแสดงที่นี่</p>
         </div>
@@ -1557,45 +1657,57 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
                 backgroundColor: "#f9f9f9"
               }}
             >
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "5px"
-              }}>
-                <h3 style={{
-                  fontSize: "18px",
-                  fontWeight: "bold",
-                  margin: 0
-                }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "5px"
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    margin: 0
+                  }}
+                >
                   {review.location}
                 </h3>
-                <span style={{
-                  fontSize: "14px",
-                  color: "#666"
-                }}>
+                <span
+                  style={{
+                    fontSize: "14px",
+                    color: "#666"
+                  }}
+                >
                   {review.date}
                 </span>
               </div>
-              <p style={{
-                margin: "5px 0",
-                fontSize: "14px",
-                color: "#666"
-              }}>
+              <p
+                style={{
+                  margin: "5px 0",
+                  fontSize: "14px",
+                  color: "#666"
+                }}
+              >
                 ชั้น: {review.floor}
               </p>
 
-              <div style={{
-                color: "#FFD700",
-                fontSize: "16px",
-                margin: "8px 0"
-              }}>
+              <div
+                style={{
+                  color: "#FFD700",
+                  fontSize: "16px",
+                  margin: "8px 0"
+                }}
+              >
                 {"★".repeat(review.rating) + "☆".repeat(5 - review.rating)}
               </div>
 
-              <p style={{
-                margin: "10px 0",
-                fontSize: "16px"
-              }}>
+              <p
+                style={{
+                  margin: "10px 0",
+                  fontSize: "16px"
+                }}
+              >
                 {review.comment}
               </p>
 
@@ -1619,111 +1731,120 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
         </div>
       )}
     </div>
-  );
+  )
 }
 
-function UserProfile({ username, handleLogout, setShowUserProfile, mapRef, userPosition, commentsByLocation }) {
-  console.log("🔹 DEBUG - UserProfile component rendered");
-  const [showMyReviews, setShowMyReviews] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [displayName, setDisplayName] = useState(username || "");
+function UserProfile({
+  username,
+  handleLogout,
+  setShowUserProfile,
+  mapRef,
+  userPosition,
+  commentsByLocation
+}) {
+  console.log("🔹 DEBUG - UserProfile component rendered")
+  const [showMyReviews, setShowMyReviews] = useState(false)
+  const [showAdminPanel, setShowAdminPanel] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [displayName, setDisplayName] = useState(username || "")
 
   useEffect(() => {
     // ตรวจสอบข้อมูลจาก props ก่อน
     if (username) {
-      setDisplayName(username);
-      return;
+      setDisplayName(username)
+      return
     }
 
     // ถ้าไม่มี username จาก props ให้ลองดึงจาก localStorage
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user")
     if (storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        const fullName = `${parsedUser.first_name || ""} ${parsedUser.last_name || ""}`.trim();
+        const parsedUser = JSON.parse(storedUser)
+        const fullName = `${parsedUser.first_name || ""} ${
+          parsedUser.last_name || ""
+        }`.trim()
         if (fullName) {
-          setDisplayName(fullName);
-          console.log("🔹 ดึงชื่อผู้ใช้จาก localStorage สำเร็จ:", fullName);
+          setDisplayName(fullName)
+          console.log("🔹 ดึงชื่อผู้ใช้จาก localStorage สำเร็จ:", fullName)
         }
       } catch (error) {
-        console.error("❌ ข้อผิดพลาดในการดึงชื่อผู้ใช้:", error);
+        console.error("❌ ข้อผิดพลาดในการดึงชื่อผู้ใช้:", error)
       }
     }
-  }, [username]);
+  }, [username])
 
   // Check if current user is admin
   useEffect(() => {
     const checkIfAdmin = () => {
-      const storedUser = localStorage.getItem("user");
+      const storedUser = localStorage.getItem("user")
       if (storedUser) {
         try {
-          const user = JSON.parse(storedUser);
+          const user = JSON.parse(storedUser)
           // Check if user has admin email
           if (user.email === "admkutoilet@gmail.com") {
-            setIsAdmin(true);
-            console.log("🔹 Admin user detected");
+            setIsAdmin(true)
+            console.log("🔹 Admin user detected")
           } else {
-            setIsAdmin(false);
+            setIsAdmin(false)
           }
         } catch (error) {
-          console.error("❌ Error checking admin status:", error);
-          setIsAdmin(false);
+          console.error("❌ Error checking admin status:", error)
+          setIsAdmin(false)
         }
       }
-    };
+    }
 
-    checkIfAdmin();
-  }, []);
+    checkIfAdmin()
+  }, [])
 
   // Function to handle "Find a toilet" button click
   const handleFindToiletClick = () => {
-    console.log("🔹 Find a toilet button clicked");
+    console.log("🔹 Find a toilet button clicked")
     // Close the profile view
-    setShowUserProfile(false);
+    setShowUserProfile(false)
 
     // Center the map on the KU campus area with a good zoom level to show markers
     if (mapRef && mapRef.current) {
-      const map = mapRef.current;
+      const map = mapRef.current
       // Center on KU campus with appropriate zoom level
-      map.setView([13.84599, 100.571218], 15, { animate: true });
-      console.log("🔹 Map centered on KU campus");
+      map.setView([13.84599, 100.571218], 15, { animate: true })
+      console.log("🔹 Map centered on KU campus")
     } else {
-      console.warn("❌ Map reference not available");
+      console.warn("❌ Map reference not available")
     }
-  };
+  }
 
   // Function to handle "Near Me" button click
   const handleNearMeClick = () => {
-    console.log("🔹 Near Me button clicked");
+    console.log("🔹 Near Me button clicked")
     // Close the profile view
-    setShowUserProfile(false);
+    setShowUserProfile(false)
 
     // Center the map on the user's current position
     if (mapRef && mapRef.current && userPosition) {
-      const map = mapRef.current;
+      const map = mapRef.current
       // Center on user's position with high zoom level (18)
-      map.setView(userPosition, 18, { animate: true });
-      map.invalidateSize(); // Fix map rendering issues
-      console.log("🔹 Map centered on user's position:", userPosition);
+      map.setView(userPosition, 18, { animate: true })
+      map.invalidateSize() // Fix map rendering issues
+      console.log("🔹 Map centered on user's position:", userPosition)
     } else {
       // If position is not available, show alert
-      alert("ไม่พบตำแหน่งของคุณ กรุณาอนุญาตการเข้าถึงตำแหน่ง");
-      console.warn("❌ User position not available");
+      alert("ไม่พบตำแหน่งของคุณ กรุณาอนุญาตการเข้าถึงตำแหน่ง")
+      console.warn("❌ User position not available")
     }
-  };
+  }
 
   // Function to handle "My review" button click
   const handleMyReviewClick = () => {
-    console.log("🔹 My review button clicked");
-    setShowMyReviews(true);
-  };
+    console.log("🔹 My review button clicked")
+    setShowMyReviews(true)
+  }
 
   // Function to handle "Admin Panel" button click
   const handleAdminPanelClick = () => {
-    console.log("🔹 Admin panel button clicked");
-    setShowAdminPanel(true);
-  };
+    console.log("🔹 Admin panel button clicked")
+    setShowAdminPanel(true)
+  }
 
   return (
     <>
@@ -1740,7 +1861,7 @@ function UserProfile({ username, handleLogout, setShowUserProfile, mapRef, userP
           boxShadow: "0px 2px 10px rgba(0, 0, 0, 0.1)",
           borderRadius: "0 0 10px 10px",
           height: "calc(100vh - 60px)",
-          overflowY: "auto",
+          overflowY: "auto"
         }}
       >
         <h1 style={{ fontSize: "30px", fontWeight: "bold", marginTop: "30px" }}>
@@ -1752,16 +1873,18 @@ function UserProfile({ username, handleLogout, setShowUserProfile, mapRef, userP
 
         {/* Admin badge for admin users */}
         {isAdmin && (
-          <div style={{
-            backgroundColor: "#006642",
-            color: "white",
-            padding: "5px 15px",
-            borderRadius: "20px",
-            display: "inline-block",
-            marginTop: "10px",
-            fontSize: "14px",
-            fontWeight: "bold"
-          }}>
+          <div
+            style={{
+              backgroundColor: "#006642",
+              color: "white",
+              padding: "5px 15px",
+              borderRadius: "20px",
+              display: "inline-block",
+              marginTop: "10px",
+              fontSize: "14px",
+              fontWeight: "bold"
+            }}
+          >
             Admin
           </div>
         )}
@@ -1772,7 +1895,7 @@ function UserProfile({ username, handleLogout, setShowUserProfile, mapRef, userP
             flexDirection: "column",
             gap: "15px",
             alignItems: "center",
-            marginTop: "40px",
+            marginTop: "40px"
           }}
         >
           {/* Find a toilet button */}
@@ -1825,7 +1948,7 @@ function UserProfile({ username, handleLogout, setShowUserProfile, mapRef, userP
             border: "none",
             borderRadius: "25px",
             width: "80%",
-            marginTop: "40px",
+            marginTop: "40px"
           }}
         >
           Logout
@@ -1843,72 +1966,75 @@ function UserProfile({ username, handleLogout, setShowUserProfile, mapRef, userP
 
       {/* Admin Panel */}
       {showAdminPanel && isAdmin && (
-        <AdminPanel
-          onClose={() => setShowAdminPanel(false)}
-        />
+        <AdminPanel onClose={() => setShowAdminPanel(false)} />
       )}
     </>
-  );
+  )
 }
 
 function AdminPanel({ onClose }) {
-  const [allReviews, setAllReviews] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('all');
-  const [locations, setLocations] = useState([]);
-  const [deleteConfirmation, setDeleteConfirmation] = useState(null);
-  const [deletingReviewId, setDeletingReviewId] = useState(null);
+  const [allReviews, setAllReviews] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [filter, setFilter] = useState("")
+  const [selectedLocation, setSelectedLocation] = useState("all")
+  const [locations, setLocations] = useState([])
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null)
+  const [deletingReviewId, setDeletingReviewId] = useState(null)
 
   // Fetch all reviews when component mounts
   useEffect(() => {
-    console.log("🔹 กำลังโหลดข้อมูลแอดมิน...");
-    fetchAllReviews();
-  }, []);
+    console.log("🔹 กำลังโหลดข้อมูลแอดมิน...")
+    fetchAllReviews()
+  }, [])
 
   const fetchAllReviews = async () => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       // ดึงข้อมูลผู้ใช้จาก localStorage
-      const storedUser = localStorage.getItem("user");
+      const storedUser = localStorage.getItem("user")
       if (!storedUser) {
-        setAllReviews([]);
-        setIsLoading(false);
-        alert("กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้");
-        return;
+        setAllReviews([])
+        setIsLoading(false)
+        alert("กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้")
+        return
       }
 
-      const user = JSON.parse(storedUser);
+      const user = JSON.parse(storedUser)
 
       // ตรวจสอบว่าผู้ใช้มีสิทธิแอดมินหรือไม่ (จากอีเมล)
       if (user.email !== "admkutoilet@gmail.com") {
-        alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
-        setIsLoading(false);
-        return;
+        alert("คุณไม่มีสิทธิ์เข้าถึงหน้านี้")
+        setIsLoading(false)
+        return
       }
 
       // ส่งอีเมลไปด้วยใน query params เพื่อยืนยันตัวตน
-      const response = await fetch(`${API_URL}/admin/reviews?email=${encodeURIComponent(user.email)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-Email': user.email  // เพิ่ม header นี้เพื่อความมั่นใจ
+      const response = await fetch(
+        `${API_URL}/admin/reviews?email=${encodeURIComponent(user.email)}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Email": user.email // เพิ่ม header นี้เพื่อความมั่นใจ
+          }
         }
-      });
+      )
 
       if (!response.ok) {
-        throw new Error(`API responded with status: ${response.status}`);
+        throw new Error(`API responded with status: ${response.status}`)
       }
 
-      const data = await response.json();
-      console.log("🔹 ดึงข้อมูลรีวิวทั้งหมดสำเร็จ:", data);
+      const data = await response.json()
+      console.log("🔹 ดึงข้อมูลรีวิวทั้งหมดสำเร็จ:", data)
 
       // Extract unique locations
-      const uniqueLocations = [...new Set(data.map(item => item.building_name))];
-      setLocations(['all', ...uniqueLocations]);
+      const uniqueLocations = [
+        ...new Set(data.map((item) => item.building_name))
+      ]
+      setLocations(["all", ...uniqueLocations])
 
       // Format reviews for display
-      const formattedReviews = data.map(item => ({
+      const formattedReviews = data.map((item) => ({
         id: item.review_id,
         userId: item.user_id,
         userName: `${item.first_name} ${item.last_name}`,
@@ -1917,72 +2043,78 @@ function AdminPanel({ onClose }) {
         floor: item.floor || "ไม่ระบุ",
         rating: item.rating,
         comment: item.comment,
-        date: new Date(item.created_at).toLocaleDateString('th-TH'),
+        date: new Date(item.created_at).toLocaleDateString("th-TH"),
         imageUrl: item.photo_url || null
-      }));
+      }))
 
-      setAllReviews(formattedReviews);
+      setAllReviews(formattedReviews)
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลรีวิว:", error);
-      alert(`ไม่สามารถดึงข้อมูลรีวิวได้: ${error.message}`);
+      console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลรีวิว:", error)
+      alert(`ไม่สามารถดึงข้อมูลรีวิวได้: ${error.message}`)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   // Filter reviews based on search term and selected location
-  const filteredReviews = allReviews.filter(review => {
+  const filteredReviews = allReviews.filter((review) => {
     const matchesSearch =
       review.comment.toLowerCase().includes(filter.toLowerCase()) ||
       review.userName.toLowerCase().includes(filter.toLowerCase()) ||
       review.userEmail.toLowerCase().includes(filter.toLowerCase()) ||
-      review.location.toLowerCase().includes(filter.toLowerCase());
+      review.location.toLowerCase().includes(filter.toLowerCase())
 
     const matchesLocation =
-      selectedLocation === 'all' ||
-      review.location === selectedLocation;
+      selectedLocation === "all" || review.location === selectedLocation
 
-    return matchesSearch && matchesLocation;
-  });
+    return matchesSearch && matchesLocation
+  })
 
   // Handle review deletion
   const handleDeleteReview = async (reviewId) => {
-    setDeletingReviewId(reviewId);
+    setDeletingReviewId(reviewId)
 
     try {
-      const storedUser = localStorage.getItem("user");
+      const storedUser = localStorage.getItem("user")
       if (!storedUser) {
-        alert("กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้");
-        setDeleteConfirmation(null);
-        return;
+        alert("กรุณาเข้าสู่ระบบก่อนใช้งานส่วนนี้")
+        setDeleteConfirmation(null)
+        return
       }
 
-      const user = JSON.parse(storedUser);
+      const user = JSON.parse(storedUser)
 
       // ส่งอีเมลไปทั้งใน URL และ Header
-      const response = await fetch(`${API_URL}/admin/reviews/${reviewId}?email=${encodeURIComponent(user.email)}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-User-Email': user.email
+      const response = await fetch(
+        `${API_URL}/admin/reviews/${reviewId}?email=${encodeURIComponent(
+          user.email
+        )}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Email": user.email
+          }
         }
-      });
+      )
 
       if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`);
+        throw new Error(`Server responded with status: ${response.status}`)
       }
 
       // Remove the deleted review from the state
-      setAllReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId));
-      alert("ลบรีวิวสำเร็จ");
-      setDeleteConfirmation(null);
+      setAllReviews((prevReviews) =>
+        prevReviews.filter((review) => review.id !== reviewId)
+      )
+      alert("ลบรีวิวสำเร็จ")
+      setDeleteConfirmation(null)
     } catch (error) {
-      console.error("❌ เกิดข้อผิดพลาดในการลบรีวิว:", error);
-      alert("ไม่สามารถลบรีวิวได้ กรุณาลองใหม่อีกครั้ง");
+      console.error("❌ เกิดข้อผิดพลาดในการลบรีวิว:", error)
+      alert("ไม่สามารถลบรีวิวได้ กรุณาลองใหม่อีกครั้ง")
     } finally {
-      setDeletingReviewId(null);
+      setDeletingReviewId(null)
     }
-  };
+  }
 
   return (
     <div
@@ -1995,22 +2127,26 @@ function AdminPanel({ onClose }) {
         backgroundColor: "white",
         zIndex: 1001,
         padding: "20px",
-        overflowY: "auto",
+        overflowY: "auto"
       }}
     >
       {/* Header with title and close button */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "20px"
-      }}>
-        <h2 style={{
-          fontSize: "24px",
-          fontWeight: "bold",
-          margin: 0,
-          color: "#006642"
-        }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px"
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: "bold",
+            margin: 0,
+            color: "#006642"
+          }}
+        >
           แผงควบคุมผู้ดูแลระบบ
         </h2>
         <button
@@ -2019,7 +2155,7 @@ function AdminPanel({ onClose }) {
             background: "none",
             border: "none",
             fontSize: "24px",
-            cursor: "pointer",
+            cursor: "pointer"
           }}
         >
           ✖
@@ -2027,12 +2163,14 @@ function AdminPanel({ onClose }) {
       </div>
 
       {/* Filters */}
-      <div style={{
-        display: "flex",
-        marginBottom: "20px",
-        gap: "10px",
-        flexWrap: "wrap"
-      }}>
+      <div
+        style={{
+          display: "flex",
+          marginBottom: "20px",
+          gap: "10px",
+          flexWrap: "wrap"
+        }}
+      >
         <input
           type="text"
           placeholder="ค้นหารีวิว..."
@@ -2058,8 +2196,11 @@ function AdminPanel({ onClose }) {
           }}
         >
           {locations.map((location, index) => (
-            <option key={index} value={location}>
-              {location === 'all' ? 'ทุกสถานที่' : location}
+            <option
+              key={index}
+              value={location}
+            >
+              {location === "all" ? "ทุกสถานที่" : location}
             </option>
           ))}
         </select>
@@ -2081,7 +2222,10 @@ function AdminPanel({ onClose }) {
 
       {/* Status Information */}
       <div style={{ marginBottom: "20px" }}>
-        <p>จำนวนรีวิวทั้งหมด: {allReviews.length} | กำลังแสดง: {filteredReviews.length}</p>
+        <p>
+          จำนวนรีวิวทั้งหมด: {allReviews.length} | กำลังแสดง:{" "}
+          {filteredReviews.length}
+        </p>
       </div>
 
       {/* Loading State */}
@@ -2090,11 +2234,13 @@ function AdminPanel({ onClose }) {
           <p>กำลังโหลดข้อมูล...</p>
         </div>
       ) : filteredReviews.length === 0 ? (
-        <div style={{
-          textAlign: "center",
-          padding: "40px 0",
-          color: "#666"
-        }}>
+        <div
+          style={{
+            textAlign: "center",
+            padding: "40px 0",
+            color: "#666"
+          }}
+        >
           <p>ไม่พบรีวิวที่ตรงกับเงื่อนไข</p>
         </div>
       ) : (
@@ -2131,66 +2277,80 @@ function AdminPanel({ onClose }) {
               </button>
 
               {/* User Info */}
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "5px",
-                flexWrap: "wrap"
-              }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "5px",
+                  flexWrap: "wrap"
+                }}
+              >
                 <div>
-                  <h3 style={{
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                    margin: 0
-                  }}>
+                  <h3
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "bold",
+                      margin: 0
+                    }}
+                  >
                     {review.userName}
                   </h3>
-                  <p style={{
-                    margin: "2px 0 0 0",
-                    fontSize: "14px",
-                    color: "#666"
-                  }}>
+                  <p
+                    style={{
+                      margin: "2px 0 0 0",
+                      fontSize: "14px",
+                      color: "#666"
+                    }}
+                  >
                     {review.userEmail}
                   </p>
                 </div>
-                <span style={{
-                  fontSize: "14px",
-                  color: "#666"
-                }}>
+                <span
+                  style={{
+                    fontSize: "14px",
+                    color: "#666"
+                  }}
+                >
                   {review.date}
                 </span>
               </div>
 
               {/* Location Info */}
-              <div style={{
-                backgroundColor: "#e8f4ea",
-                padding: "5px 10px",
-                borderRadius: "5px",
-                display: "inline-block",
-                margin: "10px 0"
-              }}>
+              <div
+                style={{
+                  backgroundColor: "#e8f4ea",
+                  padding: "5px 10px",
+                  borderRadius: "5px",
+                  display: "inline-block",
+                  margin: "10px 0"
+                }}
+              >
                 <strong>{review.location}</strong>
                 <span> | ชั้น: {review.floor}</span>
               </div>
 
               {/* Rating */}
-              <div style={{
-                color: "#FFD700",
-                fontSize: "16px",
-                margin: "8px 0"
-              }}>
+              <div
+                style={{
+                  color: "#FFD700",
+                  fontSize: "16px",
+                  margin: "8px 0"
+                }}
+              >
                 {"★".repeat(review.rating) + "☆".repeat(5 - review.rating)}
               </div>
 
               {/* Comment */}
-              <p style={{
-                margin: "10px 0",
-                fontSize: "16px",
-                backgroundColor: "#fff",
-                padding: "10px",
-                borderRadius: "5px",
-                border: "1px solid #eee"
-              }}>
+              <p
+                style={{
+                  margin: "10px 0",
+                  fontSize: "16px",
+                  backgroundColor: "#fff",
+                  padding: "10px",
+                  borderRadius: "5px",
+                  border: "1px solid #eee"
+                }}
+              >
                 {review.comment}
               </p>
 
@@ -2214,33 +2374,39 @@ function AdminPanel({ onClose }) {
 
               {/* Delete Confirmation Modal */}
               {deleteConfirmation === review.id && (
-                <div style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: "rgba(255, 255, 255, 0.9)",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  borderRadius: "10px",
-                  zIndex: 2
-                }}>
-                  <p style={{
-                    fontSize: "16px",
-                    fontWeight: "bold",
-                    textAlign: "center",
-                    margin: "10px 0"
-                  }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    borderRadius: "10px",
+                    zIndex: 2
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                      margin: "10px 0"
+                    }}
+                  >
                     ยืนยันการลบรีวิวนี้?
                   </p>
-                  <div style={{
-                    display: "flex",
-                    gap: "10px",
-                    marginTop: "10px"
-                  }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      marginTop: "10px"
+                    }}
+                  >
                     <button
                       onClick={() => setDeleteConfirmation(null)}
                       style={{
@@ -2276,26 +2442,25 @@ function AdminPanel({ onClose }) {
         </div>
       )}
     </div>
-  );
+  )
 }
 
-
 function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [username, setUsername] = useState("");
-  const [showSignUp, setShowSignUp] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [selectedMarker, setSelectedMarker] = useState(null);
-  const [showUserProfile, setShowUserProfile] = useState(false);
-  const [showFilter, setShowFilter] = useState(false);
-  const [commentsByLocation, setCommentsByLocation] = useState({});
-  const [userPosition, setUserPosition] = useState(null);
-  const [searchText, setSearchText] = useState("");
-  const [user, setUser] = useState(null);
-  const [showProfile, setShowProfile] = useState(false);
-  const [filteredRestrooms, setFilteredRestrooms] = useState([]);
-  const [restrooms, setRestrooms] = useState([]);
-  const mapRef = useRef(null);
+  const [loggedIn, setLoggedIn] = useState(false)
+  const [username, setUsername] = useState("")
+  const [showSignUp, setShowSignUp] = useState(false)
+  const [showLogin, setShowLogin] = useState(false)
+  const [selectedMarker, setSelectedMarker] = useState(null)
+  const [showUserProfile, setShowUserProfile] = useState(false)
+  const [showFilter, setShowFilter] = useState(false)
+  const [commentsByLocation, setCommentsByLocation] = useState({})
+  const [userPosition, setUserPosition] = useState(null)
+  const [searchText, setSearchText] = useState("")
+  const [user, setUser] = useState(null)
+  const [showProfile, setShowProfile] = useState(false)
+  const [filteredRestrooms, setFilteredRestrooms] = useState([])
+  const [restrooms, setRestrooms] = useState([])
+  const mapRef = useRef(null)
 
   const [filters, setFilters] = useState({
     women: false,
@@ -2303,14 +2468,14 @@ function App() {
     accessible: false,
     bidet: false,
     tissue: false,
-    free: false,
-  });
+    free: false
+  })
 
   const applyFilters = () => {
     const filtered = restrooms.filter((restroom) => {
       const matchesSearch =
         !searchText ||
-        restroom.name.toLowerCase().includes(searchText.toLowerCase());
+        restroom.name.toLowerCase().includes(searchText.toLowerCase())
 
       return (
         matchesSearch &&
@@ -2320,118 +2485,127 @@ function App() {
         (!filters.bidet || restroom.features.bidet) &&
         (!filters.tissue || restroom.features.tissue) &&
         (!filters.free || restroom.features.free)
-      );
-    });
+      )
+    })
 
-    console.log("🔹 Filtered Restrooms:", filtered);
-    setFilteredRestrooms(filtered);
-  };
-
-  useEffect(() => {
-    applyFilters();
-  }, [searchText, filters, restrooms]);
+    console.log("🔹 Filtered Restrooms:", filtered)
+    setFilteredRestrooms(filtered)
+  }
 
   useEffect(() => {
-    setFilteredRestrooms(restrooms); // ✅ ตั้งค่าข้อมูลที่ถูกกรองให้เป็นข้อมูลทั้งหมดก่อน
-  }, [restrooms]);
+    applyFilters()
+  }, [searchText, filters, restrooms])
 
-  const NO_IMAGE_URL = require("./img/logo.png");
+  useEffect(() => {
+    setFilteredRestrooms(restrooms) // ✅ ตั้งค่าข้อมูลที่ถูกกรองให้เป็นข้อมูลทั้งหมดก่อน
+  }, [restrooms])
+
+  const NO_IMAGE_URL = require("./img/logo.png")
 
   const MapController = () => {
-    const map = useMap();
+    const map = useMap()
 
     // Store the map reference when the component mounts
     useEffect(() => {
-      mapRef.current = map;
-      console.log("🔹 Map reference saved");
-    }, [map]);
+      mapRef.current = map
+      console.log("🔹 Map reference saved")
+    }, [map])
 
-    return null;
-  };
+    return null
+  }
 
   const convertGoogleDriveThumbnail = (url) => {
     if (!url || typeof url !== "string") {
-      console.warn("❌ Invalid URL provided:", url);
-      return NO_IMAGE_URL;
+      console.warn("❌ Invalid URL provided:", url)
+      return NO_IMAGE_URL
     }
 
-    const googleDriveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)\//);
+    const googleDriveMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)\//)
     if (googleDriveMatch) {
-      return `https://drive.google.com/thumbnail?id=${googleDriveMatch[1]}&sz=w1000`;
+      return `https://drive.google.com/thumbnail?id=${googleDriveMatch[1]}&sz=w1000`
     }
 
-    return url;
-  };
+    return url
+  }
 
   const calculateAverageRating = (reviews) => {
-    if (!reviews || reviews.length === 0) return 0;
+    if (!reviews || reviews.length === 0) return 0
 
-    let totalRating = 0;
-    let count = 0;
+    let totalRating = 0
+    let count = 0
 
-    reviews.forEach(review => {
-      if (review.review && typeof review.review.rating === 'number') {
-        totalRating += review.review.rating;
-        count++;
+    reviews.forEach((review) => {
+      if (review.review && typeof review.review.rating === "number") {
+        totalRating += review.review.rating
+        count++
       }
-    });
+    })
 
-    return count > 0 ? (totalRating / count).toFixed(1) : 0;
-  };
+    return count > 0 ? (totalRating / count).toFixed(1) : 0
+  }
 
   // ✅ โหลดข้อมูลจาก Backend เมื่อ Component โหลด
   useEffect(() => {
-    console.log("🔹 กำลังโหลดข้อมูลห้องน้ำจาก API...");
+    console.log("🔹 กำลังโหลดข้อมูลห้องน้ำจาก API...")
 
     fetch(`${API_URL}/restrooms/details`)
       .then((res) => {
         if (!res.ok) {
-          throw new Error(`API responded with status: ${res.status}`);
+          throw new Error(`API responded with status: ${res.status}`)
         }
-        return res.json();
+        return res.json()
       })
       .then((data) => {
-        console.log("✅ โหลดข้อมูลห้องน้ำสำเร็จ:", data);
+        console.log("✅ โหลดข้อมูลห้องน้ำสำเร็จ:", data)
 
         const transformedData = data.map((item) => {
           // สร้าง object สำหรับเก็บความคิดเห็นพร้อมรูปภาพ
-          const processedReviews = {};
+          const processedReviews = {}
 
           // แปลงข้อมูลความคิดเห็นให้มีรูปแบบที่ต้องการ
           if (item.reviews && Array.isArray(item.reviews)) {
-            item.reviews.forEach(review => {
+            item.reviews.forEach((review) => {
               // ถ้ามีรูปภาพประกอบ ให้แนบไปด้วย
-              let reviewImage = null;
+              let reviewImage = null
 
               // ตรวจสอบว่า review มี photos หรือไม่
-              if (review.photos && Array.isArray(review.photos) && review.photos.length > 0) {
+              if (
+                review.photos &&
+                Array.isArray(review.photos) &&
+                review.photos.length > 0
+              ) {
                 // ใช้ URL รูปภาพแรก
-                reviewImage = convertGoogleDriveThumbnail(review.photos[0].base64);
+                reviewImage = convertGoogleDriveThumbnail(
+                  review.photos[0].base64
+                )
               }
 
               // สร้างข้อมูลความคิดเห็นในรูปแบบที่แอพต้องการ
               const formattedReview = {
-                username: review.review.first_name + " " + review.review.last_name,
+                username:
+                  review.review.first_name + " " + review.review.last_name,
                 text: review.review.comment,
                 rating: review.review.rating,
                 date: new Date().toLocaleDateString("en-GB"), // อาจต้องปรับปรุงให้ใช้วันที่จริงจาก API
                 image: reviewImage
-              };
+              }
 
               // เพิ่มความคิดเห็นเข้าไปในคอลเลกชันของห้องน้ำนี้
               if (!processedReviews[item.restroom.building_name]) {
-                processedReviews[item.restroom.building_name] = [];
+                processedReviews[item.restroom.building_name] = []
               }
-              processedReviews[item.restroom.building_name].push(formattedReview);
-            });
+              processedReviews[item.restroom.building_name].push(
+                formattedReview
+              )
+            })
           }
 
           // เพิ่มข้อมูลความคิดเห็นเข้าไปในแอพ
           if (Object.keys(processedReviews).length > 0) {
-            setCommentsByLocation(prev => ({
+            setCommentsByLocation((prev) => ({
               ...prev,
               ...processedReviews
-            }));
+            }))
           }
 
           // สร้างข้อมูลห้องน้ำในรูปแบบที่แอพต้องการ
@@ -2439,7 +2613,7 @@ function App() {
             id: item.restroom.restroom_id, // เพิ่ม ID เพื่อใช้ในการบันทึกความคิดเห็น
             geocode: [
               parseFloat(item.restroom.latitude),
-              parseFloat(item.restroom.longitude),
+              parseFloat(item.restroom.longitude)
             ],
             name: item.restroom.building_name,
             floor: item.restroom.floor,
@@ -2450,7 +2624,7 @@ function App() {
               accessible: item.restroom.is_accessible,
               bidet: item.restroom.is_bum_gun,
               tissue: item.restroom.is_toilet_paper,
-              free: item.restroom.is_free,
+              free: item.restroom.is_free
             },
             hours: {
               monday: item.restroom.opening_hours_monday || "ไม่ระบุ",
@@ -2459,126 +2633,126 @@ function App() {
               thursday: item.restroom.opening_hours_thursday || "ไม่ระบุ",
               friday: item.restroom.opening_hours_friday || "ไม่ระบุ",
               saturday: item.restroom.opening_hours_saturday || "ไม่ระบุ",
-              sunday: item.restroom.opening_hours_sunday || "ไม่ระบุ",
+              sunday: item.restroom.opening_hours_sunday || "ไม่ระบุ"
             },
             imageUrls: (item.restroom_photos || []).map((photo) =>
               convertGoogleDriveThumbnail(photo.base64)
-            ),
-          };
-        });
+            )
+          }
+        })
 
-        setRestrooms(transformedData);
+        setRestrooms(transformedData)
       })
-      .catch((err) => console.error("❌ Error fetching restrooms:", err));
-  }, []);
+      .catch((err) => console.error("❌ Error fetching restrooms:", err))
+  }, [])
 
   useEffect(() => {
     const loadUserData = () => {
-      const storedUser = localStorage.getItem("user");
+      const storedUser = localStorage.getItem("user")
       if (storedUser) {
         try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
+          const parsedUser = JSON.parse(storedUser)
+          setUser(parsedUser)
 
           // สร้างชื่อผู้ใช้จากชื่อและนามสกุล (ตรวจสอบค่าว่างด้วย)
-          const firstName = parsedUser.first_name || "";
-          const lastName = parsedUser.last_name || "";
-          const fullName = `${firstName} ${lastName}`.trim();
+          const firstName = parsedUser.first_name || ""
+          const lastName = parsedUser.last_name || ""
+          const fullName = `${firstName} ${lastName}`.trim()
 
           if (fullName) {
-            setUsername(fullName);
-            console.log("✅ พบข้อมูลผู้ใช้: ", fullName);
+            setUsername(fullName)
+            console.log("✅ พบข้อมูลผู้ใช้: ", fullName)
           } else {
             // ถ้าไม่มีชื่อ ให้ใช้อีเมลแทน
-            setUsername(parsedUser.email || "Guest");
+            setUsername(parsedUser.email || "Guest")
           }
 
-          setLoggedIn(true);
+          setLoggedIn(true)
         } catch (error) {
-          console.error("❌ เกิดข้อผิดพลาดในการแปลงข้อมูลผู้ใช้:", error);
-          localStorage.removeItem("user");
-          setLoggedIn(false);
-          setUser(null);
-          setUsername("");
+          console.error("❌ เกิดข้อผิดพลาดในการแปลงข้อมูลผู้ใช้:", error)
+          localStorage.removeItem("user")
+          setLoggedIn(false)
+          setUser(null)
+          setUsername("")
         }
       } else {
-        console.log("⚠️ ไม่พบข้อมูลผู้ใช้ใน localStorage");
-        setLoggedIn(false);
-        setUser(null);
-        setUsername("");
+        console.log("⚠️ ไม่พบข้อมูลผู้ใช้ใน localStorage")
+        setLoggedIn(false)
+        setUser(null)
+        setUsername("")
       }
-    };
+    }
 
-    loadUserData();
-  }, []);
+    loadUserData()
+  }, [])
 
   const handleProfileClick = () => {
-    console.log("🔹 กำลังคลิกที่ไอคอนโปรไฟล์");
+    console.log("🔹 กำลังคลิกที่ไอคอนโปรไฟล์")
 
     // 1. ถ้ากำลังแสดงหน้า Profile ให้ปิดเท่านั้น
     if (showUserProfile) {
-      console.log("🔹 กำลังปิดหน้าโปรไฟล์");
-      setShowUserProfile(false);
-      return;
+      console.log("🔹 กำลังปิดหน้าโปรไฟล์")
+      setShowUserProfile(false)
+      return
     }
 
     // 2. ถ้ากำลังแสดงหน้า Login ให้ปิดเท่านั้น
     if (showLogin) {
-      console.log("🔹 กำลังปิดหน้าล็อกอิน");
-      setShowLogin(false);
-      return;
+      console.log("🔹 กำลังปิดหน้าล็อกอิน")
+      setShowLogin(false)
+      return
     }
 
     // 3. ตรวจสอบสถานะการล็อกอิน
     if (loggedIn) {
       // ถ้าล็อกอินแล้ว ให้เปิดหน้าโปรไฟล์
-      console.log("🔹 ผู้ใช้ล็อกอินแล้ว เปิดหน้าโปรไฟล์");
-      setShowUserProfile(true);
+      console.log("🔹 ผู้ใช้ล็อกอินแล้ว เปิดหน้าโปรไฟล์")
+      setShowUserProfile(true)
     } else {
       // ถ้ายังไม่ได้ล็อกอิน ให้เปิดหน้าล็อกอิน
-      console.log("🔹 ผู้ใช้ยังไม่ได้ล็อกอิน เปิดหน้าล็อกอิน");
-      setShowLogin(true);
+      console.log("🔹 ผู้ใช้ยังไม่ได้ล็อกอิน เปิดหน้าล็อกอิน")
+      setShowLogin(true)
     }
-  };
+  }
 
   const handleFilterClick = () => {
-    setShowFilter((prev) => !prev);
-  };
+    setShowFilter((prev) => !prev)
+  }
 
   const handleRegisterClick = () => {
-    setShowSignUp(true);
-    setShowLogin(false);
-  };
+    setShowSignUp(true)
+    setShowLogin(false)
+  }
 
   const handleLoginClick = () => {
-    setShowSignUp(false);
-    setShowLogin(true);
-  };
+    setShowSignUp(false)
+    setShowLogin(true)
+  }
 
   const handleLogin = (usernameInput) => {
-    console.log("🔹 User logged in:", usernameInput);
-    setUsername(usernameInput);
-    setLoggedIn(true);
-    setShowLogin(false);
-    setShowUserProfile(true); // เพิ่มบรรทัดนี้เพื่อแสดงโปรไฟล์หลังล็อกอินทันที
-  };
+    console.log("🔹 User logged in:", usernameInput)
+    setUsername(usernameInput)
+    setLoggedIn(true)
+    setShowLogin(false)
+    setShowUserProfile(true) // เพิ่มบรรทัดนี้เพื่อแสดงโปรไฟล์หลังล็อกอินทันที
+  }
 
   const handleLogout = () => {
-    console.log("🔹 กำลังออกจากระบบ");
+    console.log("🔹 กำลังออกจากระบบ")
 
     // ลบข้อมูลผู้ใช้และรีเซ็ตสถานะ
-    localStorage.removeItem("user");
-    setUser(null);
-    setLoggedIn(false);
+    localStorage.removeItem("user")
+    setUser(null)
+    setLoggedIn(false)
 
     // ปิดหน้าโปรไฟล์
-    setShowUserProfile(false);
+    setShowUserProfile(false)
 
     // เปิดหน้าล็อกอินทันที
     setTimeout(() => {
-      setShowLogin(true);
-    }, 100); // ใช้ setTimeout เพื่อให้การเปลี่ยนสถานะมีเวลาอัปเดตก่อน
-  };
+      setShowLogin(true)
+    }, 100) // ใช้ setTimeout เพื่อให้การเปลี่ยนสถานะมีเวลาอัปเดตก่อน
+  }
 
   return (
     <GoogleOAuthProvider clientId="577202715001-pa9pfkmbm44haiocpbpg4ran1rn4f824.apps.googleusercontent.com">
@@ -2587,8 +2761,8 @@ function App() {
           onFilterClick={() => setShowFilter(!showFilter)}
           onProfileClick={handleProfileClick}
           onSearchChange={(text) => {
-            setSearchText(text);
-            applyFilters();
+            setSearchText(text)
+            applyFilters()
           }}
           isLoggedIn={loggedIn}
         />
@@ -2601,16 +2775,16 @@ function App() {
             commentsByLocation={commentsByLocation}
             setShowUserProfile={setShowUserProfile}
             handleLogout={() => {
-              console.log("🔹 กำลังออกจากระบบจากหน้าโปรไฟล์");
-              localStorage.removeItem("user");
-              setUser(null);
-              setLoggedIn(false);
-              setShowUserProfile(false);
+              console.log("🔹 กำลังออกจากระบบจากหน้าโปรไฟล์")
+              localStorage.removeItem("user")
+              setUser(null)
+              setLoggedIn(false)
+              setShowUserProfile(false)
 
               // เปิดหน้าล็อกอินทันที
               setTimeout(() => {
-                setShowLogin(true);
-              }, 100);
+                setShowLogin(true)
+              }, 100)
             }}
           />
         )}
@@ -2627,8 +2801,8 @@ function App() {
           <SignUpPage
             onClose={() => setShowSignUp(false)}
             onLoginClick={() => {
-              setShowSignUp(false);
-              setShowLogin(true);
+              setShowSignUp(false)
+              setShowLogin(true)
             }}
           />
         )}
@@ -2638,7 +2812,7 @@ function App() {
             width: "100%",
             height: "100vh",
             marginTop: "60px",
-            position: "relative",
+            position: "relative"
           }}
           center={[13.84599, 100.571218]}
           zoom={13}
@@ -2656,7 +2830,7 @@ function App() {
                 position={marker.geocode}
                 icon={customIcon}
                 eventHandlers={{
-                  click: () => setSelectedMarker(marker),
+                  click: () => setSelectedMarker(marker)
                 }}
               >
                 <Popup>
@@ -2675,7 +2849,7 @@ function App() {
               position: "absolute",
               bottom: "60px",
               right: "20px",
-              zIndex: 1000,
+              zIndex: 1000
             }}
           >
             <ReCenterButton position={userPosition} />
@@ -2691,7 +2865,7 @@ function App() {
               backgroundColor: "white",
               padding: "20px",
               borderRadius: "20px 20px 0 0",
-              boxShadow: "0px -2px 10px rgba(0, 0, 0, 0.1)",
+              boxShadow: "0px -2px 10px rgba(0, 0, 0, 0.1)"
             }}
           >
             <button
@@ -2731,7 +2905,7 @@ function App() {
                   width: "100%",
                   maxHeight: "200px",
                   objectFit: "cover",
-                  marginTop: "10px",
+                  marginTop: "10px"
                 }}
               />
             )}
@@ -2757,7 +2931,7 @@ function App() {
         />
       </div>
     </GoogleOAuthProvider>
-  );
+  )
 }
 
 const profileButtonStyle = {
@@ -2769,6 +2943,6 @@ const profileButtonStyle = {
   borderRadius: "25px",
   width: "80%",
   cursor: "pointer"
-};
+}
 
-export default App;
+export default App
