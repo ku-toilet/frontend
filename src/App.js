@@ -15,6 +15,39 @@ import "./App.css"
 
 const API_URL = "http://localhost:3001"
 
+const formatDate = (dateString) => {
+  if (!dateString) return "ไม่ระบุวันที่";
+
+  try {
+    // รองรับรูปแบบ ISO date (YYYY-MM-DD)
+    if (typeof dateString === "string" && dateString.includes("-")) {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "ไม่ระบุวันที่";
+
+      // แปลงเป็นรูปแบบ DD/MM/YYYY
+      return new Intl.DateTimeFormat("th-TH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(date);
+    }
+
+    // กรณีเป็น Date object
+    if (dateString instanceof Date) {
+      return new Intl.DateTimeFormat("th-TH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(dateString);
+    }
+
+    return dateString;
+  } catch (error) {
+    console.error("❌ Error formatting date:", error);
+    return "ไม่ระบุวันที่";
+  }
+};
+
 Icon.Default.mergeOptions({
   iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
   iconUrl: require("leaflet/dist/images/marker-icon.png"),
@@ -979,7 +1012,9 @@ function BottomSheet({
           username: username,
           text: comment,
           rating: rating,
-          date: new Date().toLocaleDateString("en-GB"),
+          date: data.review_date
+            ? new Date(data.review_date).toLocaleDateString("th-TH")
+            : new Date().toLocaleDateString("th-TH"),
           image: data.photo_url || null
         }
 
@@ -1013,7 +1048,9 @@ function BottomSheet({
         username: username,
         text: comment,
         rating: rating,
-        date: new Date().toLocaleDateString("en-GB"),
+        date: data.review_date
+          ? new Date(data.review_date).toLocaleDateString("th-TH")
+          : new Date().toLocaleDateString("th-TH"),
         image: data.photo_url || null
       }
 
@@ -1549,34 +1586,67 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
           floor: item.floor || "ไม่ระบุ",
           rating: item.rating,
           comment: item.comment,
-          date: new Date(item.created_at).toLocaleDateString("th-TH"),
+          date: item.review_date
+            ? formatDate(item.review_date)
+            : item.created_at
+              ? formatDate(item.created_at)
+              : "ไม่ระบุวันที่",
+          // เก็บวันที่ดิบไว้ใช้สำหรับการเรียงลำดับ
+          rawDate: item.review_date || item.created_at || new Date(0),
           imageUrl: item.photo_url || null
-        }))
+        }));
 
-        setUserReviews(formattedReviews)
+        // เรียงลำดับรีวิวจากวันที่ล่าสุดไปยังเก่าสุด
+        formattedReviews.sort((a, b) => {
+          // แปลงเป็น Date object เพื่อเปรียบเทียบ
+          const dateA = new Date(a.rawDate);
+          const dateB = new Date(b.rawDate);
+          return dateB - dateA; // เรียงจากใหม่ไปเก่า (ล่าสุดอยู่บนสุด)
+        });
+
+        setUserReviews(formattedReviews);
       } catch (error) {
         console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลรีวิว:", error)
 
         // Fallback: Filter reviews from existing commentsByLocation data
-        console.log("🔶 ใช้ข้อมูลสำรองจาก commentsByLocation")
-        const allUserReviews = []
+        console.log("🔶 ใช้ข้อมูลสำรองจาก commentsByLocation");
+        const allUserReviews = [];
 
         Object.entries(commentsByLocation).forEach(([location, comments]) => {
           comments.forEach((comment) => {
             if (comment.username === username) {
+              // แยกแปลงวันที่ไทยเป็น Date object
+              let rawDate;
+              try {
+                // พยายามแปลงวันที่ในรูปแบบไทย (วัน/เดือน/ปี) เป็น Date object
+                const parts = comment.date.split('/');
+                if (parts.length === 3) {
+                  // format: dd/mm/yyyy (ปีไทย)
+                  rawDate = new Date(parseInt(parts[2]) - 543, parseInt(parts[1]) - 1, parseInt(parts[0]));
+                } else {
+                  rawDate = new Date(); // ถ้าแปลงไม่ได้ ใช้วันที่ปัจจุบัน
+                }
+              } catch (e) {
+                rawDate = new Date(); // กรณีมีข้อผิดพลาด
+              }
+
               allUserReviews.push({
                 location: location,
-                floor: "ไม่ระบุ", // We don't have floor info in commentsByLocation
+                floor: "ไม่ระบุ",
                 rating: comment.rating,
                 comment: comment.text,
                 date: comment.date,
+                rawDate: rawDate, // เก็บ Date object ไว้สำหรับเรียงลำดับ
                 imageUrl: comment.image || null
-              })
+              });
             }
-          })
-        })
+          });
+        });
 
-        setUserReviews(allUserReviews)
+        // เรียงลำดับรีวิวจากวันที่ล่าสุดไปเก่าสุด
+        allUserReviews.sort((a, b) => b.rawDate - a.rawDate);
+
+        setUserReviews(allUserReviews);
       } finally {
         setIsLoading(false)
       }
@@ -1760,9 +1830,8 @@ function UserProfile({
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser)
-        const fullName = `${parsedUser.first_name || ""} ${
-          parsedUser.last_name || ""
-        }`.trim()
+        const fullName = `${parsedUser.first_name || ""} ${parsedUser.last_name || ""
+          }`.trim()
         if (fullName) {
           setDisplayName(fullName)
           console.log("🔹 ดึงชื่อผู้ใช้จาก localStorage สำเร็จ:", fullName)
@@ -1981,6 +2050,8 @@ function AdminPanel({ onClose }) {
   const [deleteConfirmation, setDeleteConfirmation] = useState(null)
   const [deletingReviewId, setDeletingReviewId] = useState(null)
 
+  // ฟังก์ชันช่วยในการแปลงวันที่จากฐานข้อมูลให้แสดงผลถูกต้อง
+
   // Fetch all reviews when component mounts
   useEffect(() => {
     console.log("🔹 กำลังโหลดข้อมูลแอดมิน...")
@@ -2043,7 +2114,11 @@ function AdminPanel({ onClose }) {
         floor: item.floor || "ไม่ระบุ",
         rating: item.rating,
         comment: item.comment,
-        date: new Date(item.created_at).toLocaleDateString("th-TH"),
+        date: item.review_date
+          ? formatDate(item.review_date)
+          : item.created_at
+            ? formatDate(item.created_at)
+            : "ไม่ระบุวันที่",
         imageUrl: item.photo_url || null
       }))
 
@@ -2308,7 +2383,8 @@ function AdminPanel({ onClose }) {
                 <span
                   style={{
                     fontSize: "14px",
-                    color: "#666"
+                    color: "#666",
+                    marginRight: "30px"
                   }}
                 >
                   {review.date}
@@ -2586,7 +2662,9 @@ function App() {
                   review.review.first_name + " " + review.review.last_name,
                 text: review.review.comment,
                 rating: review.review.rating,
-                date: new Date().toLocaleDateString("en-GB"), // อาจต้องปรับปรุงให้ใช้วันที่จริงจาก API
+                date: review.review.review_date
+                  ? new Date(review.review.review_date).toLocaleDateString("th-TH")
+                  : new Date().toLocaleDateString("th-TH"),
                 image: reviewImage
               }
 
