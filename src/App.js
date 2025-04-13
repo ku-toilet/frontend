@@ -785,10 +785,44 @@ function BottomSheet({
       if (selectedImage && window.FileReader) {
         const reader = new FileReader()
         reader.onload = function (e) {
-          const base64data = e.target.result
-          sendReviewWithBase64(formData, base64data)
+          const base64data = e.target.result // ได้ base64 แล้ว
+          
+          // สร้างข้อมูลรีวิวพร้อมรูปภาพ base64
+          const reviewData = {
+            restroom_id: formData.get("restroom_id"),
+            user_id: formData.get("user_id"),
+            rating: formData.get("rating"),
+            comment: formData.get("comment") || "",
+            photo_base64: base64data // ส่ง base64 ไปเลย ไม่ต้องแยกส่วน
+          }
+    
+          // ส่งข้อมูลไปยัง API
+          fetch(`${API_URL}/review/base64`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(reviewData)
+          })
+          .then(response => {
+            if (!response.ok) {
+              return response.text().then(text => {
+                throw new Error(`Server responded with status: ${response.status}. ${text}`)
+              })
+            }
+            return response.json()
+          })
+          .then(data => {
+            console.log("✅ Review submission successful:", data)
+            // จัดการข้อมูลที่ได้รับกลับมา
+            handleResponse(data)
+          })
+          .catch(error => {
+            console.error("❌ Error in review submission:", error)
+            handleError(error)
+          })
         }
-        reader.readAsDataURL(selectedImage)
+        reader.readAsDataURL(selectedImage) // อ่านไฟล์เป็น data URL (base64)
       } else {
         // ส่งข้อมูลไปยัง API แบบปกติ
         sendReviewData(formData)
@@ -1013,8 +1047,8 @@ function BottomSheet({
           text: comment,
           rating: rating,
           date: data.review_date
-            ? new Date(data.review_date).toLocaleDateString("th-TH")
-            : new Date().toLocaleDateString("th-TH"),
+  ? new Date(data.review_date).toLocaleDateString("th-TH")
+  : new Date().toLocaleDateString("th-TH"),
           image: data.photo_url || null
         }
 
@@ -1049,8 +1083,8 @@ function BottomSheet({
         text: comment,
         rating: rating,
         date: data.review_date
-          ? new Date(data.review_date).toLocaleDateString("th-TH")
-          : new Date().toLocaleDateString("th-TH"),
+  ? new Date(data.review_date).toLocaleDateString("th-TH")
+  : new Date().toLocaleDateString("th-TH"),
         image: data.photo_url || null
       }
 
@@ -1092,12 +1126,17 @@ function BottomSheet({
 
   const DriveImage = ({ driveId, index, fallbackUrl }) => {
     const [hasError, setHasError] = useState(false)
-
-    // Format Google Drive URL correctly for image embedding
-    const formattedUrl = driveId
-      ? `https://lh3.googleusercontent.com/d/${driveId}`
-      : fallbackUrl
-
+  
+    // ตรวจสอบว่าเป็น base64 หรือไม่
+    const isBase64 = driveId && typeof driveId === 'string' && driveId.startsWith('data:');
+    
+    // ถ้าเป็น base64 ใช้ตรงๆ ถ้าไม่ใช่ ให้ใช้ URL ของ Google Drive
+    const formattedUrl = isBase64
+      ? driveId // ถ้าเป็น base64 ให้ใช้ค่าเดิม
+      : driveId 
+        ? `https://lh3.googleusercontent.com/d/${driveId}` // ถ้าเป็น Drive ID
+        : fallbackUrl; // ถ้าไม่มีค่า ใช้รูปสำรอง
+  
     return (
       <img
         src={hasError ? fallbackUrl : formattedUrl}
@@ -1113,7 +1152,6 @@ function BottomSheet({
           padding: "5px"
         }}
         onError={(e) => {
-          console.log("🚀 ~ DriveImage ~ formattedUrl:", formattedUrl)
           console.error(`❌ Error loading image: ${driveId}`)
           setHasError(true)
         }}
@@ -1122,16 +1160,27 @@ function BottomSheet({
   }
 
   const extractDriveId = (url) => {
-    // Handle full Google Drive links
+    // ตรวจสอบว่าเป็น base64 หรือไม่
+    if (typeof url === "string" && url.startsWith('data:')) {
+      return url; // ถ้าเป็น base64 ให้ส่งคืนค่าเดิม
+    }
+    
+    // ตรวจสอบว่าเป็น URL ของ Google Drive หรือไม่
     if (typeof url === "string" && url.includes("drive.google.com")) {
       const idMatch = url.match(/[\/?]d\/([^\/]+)/)
       if (idMatch && idMatch[1]) return idMatch[1]
-
+  
       const idParam = url.match(/[?&]id=([^&]+)/)
       if (idParam && idParam[1]) return idParam[1]
     }
-
-    // If already an ID or can't extract
+  
+    // ถ้าเป็น URL ของ Google Photos
+    if (typeof url === "string" && url.includes("googleusercontent.com/d/")) {
+      const idMatch = url.match(/\/d\/([^\/]+)/)
+      if (idMatch && idMatch[1]) return idMatch[1]
+    }
+  
+    // ถ้าไม่ใช่ทั้งหมด ส่งคืนค่าเดิม
     return url
   }
 
@@ -1524,23 +1573,23 @@ function BottomSheet({
 
             {/* รูปภาพของความคิดเห็น - NEW */}
             {c.image && (
-              <div style={{ marginTop: "5px", marginBottom: "5px" }}>
-                <img
-                  src={c.image}
-                  alt="Comment image"
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "200px",
-                    borderRadius: "5px",
-                    cursor: "pointer"
-                  }}
-                  onClick={() => {
-                    // สามารถเพิ่มฟังก์ชันเปิดรูปภาพแบบเต็มจอได้ตรงนี้
-                    window.open(c.image, "_blank")
-                  }}
-                />
-              </div>
-            )}
+  <div style={{ marginTop: "5px", marginBottom: "5px" }}>
+    <img
+      src={c.image} // ใช้ URL หรือ base64 โดยตรง
+      alt="Comment image"
+      style={{
+        maxWidth: "100%",
+        maxHeight: "200px",
+        borderRadius: "5px",
+        cursor: "pointer"
+      }}
+      onClick={() => {
+        // เปิดรูปภาพแบบเต็มจอ
+        window.open(c.image, "_blank")
+      }}
+    />
+  </div>
+)}
 
             <span style={{ fontSize: "12px", color: "gray" }}>{c.date}</span>
           </div>
@@ -1589,13 +1638,13 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
           date: item.review_date
             ? formatDate(item.review_date)
             : item.created_at
-              ? formatDate(item.created_at)
-              : "ไม่ระบุวันที่",
+            ? formatDate(item.created_at)
+            : "ไม่ระบุวันที่",
           // เก็บวันที่ดิบไว้ใช้สำหรับการเรียงลำดับ
           rawDate: item.review_date || item.created_at || new Date(0),
           imageUrl: item.photo_url || null
         }));
-
+        
         // เรียงลำดับรีวิวจากวันที่ล่าสุดไปยังเก่าสุด
         formattedReviews.sort((a, b) => {
           // แปลงเป็น Date object เพื่อเปรียบเทียบ
@@ -1603,50 +1652,50 @@ function MyReviewsPage({ onClose, username, commentsByLocation }) {
           const dateB = new Date(b.rawDate);
           return dateB - dateA; // เรียงจากใหม่ไปเก่า (ล่าสุดอยู่บนสุด)
         });
-
+        
         setUserReviews(formattedReviews);
       } catch (error) {
         console.error("❌ เกิดข้อผิดพลาดในการดึงข้อมูลรีวิว:", error)
 
         // Fallback: Filter reviews from existing commentsByLocation data
-        console.log("🔶 ใช้ข้อมูลสำรองจาก commentsByLocation");
-        const allUserReviews = [];
+console.log("🔶 ใช้ข้อมูลสำรองจาก commentsByLocation");
+const allUserReviews = [];
 
-        Object.entries(commentsByLocation).forEach(([location, comments]) => {
-          comments.forEach((comment) => {
-            if (comment.username === username) {
-              // แยกแปลงวันที่ไทยเป็น Date object
-              let rawDate;
-              try {
-                // พยายามแปลงวันที่ในรูปแบบไทย (วัน/เดือน/ปี) เป็น Date object
-                const parts = comment.date.split('/');
-                if (parts.length === 3) {
-                  // format: dd/mm/yyyy (ปีไทย)
-                  rawDate = new Date(parseInt(parts[2]) - 543, parseInt(parts[1]) - 1, parseInt(parts[0]));
-                } else {
-                  rawDate = new Date(); // ถ้าแปลงไม่ได้ ใช้วันที่ปัจจุบัน
-                }
-              } catch (e) {
-                rawDate = new Date(); // กรณีมีข้อผิดพลาด
-              }
+Object.entries(commentsByLocation).forEach(([location, comments]) => {
+  comments.forEach((comment) => {
+    if (comment.username === username) {
+      // แยกแปลงวันที่ไทยเป็น Date object
+      let rawDate;
+      try {
+        // พยายามแปลงวันที่ในรูปแบบไทย (วัน/เดือน/ปี) เป็น Date object
+        const parts = comment.date.split('/');
+        if (parts.length === 3) {
+          // format: dd/mm/yyyy (ปีไทย)
+          rawDate = new Date(parseInt(parts[2]) - 543, parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else {
+          rawDate = new Date(); // ถ้าแปลงไม่ได้ ใช้วันที่ปัจจุบัน
+        }
+      } catch (e) {
+        rawDate = new Date(); // กรณีมีข้อผิดพลาด
+      }
+      
+      allUserReviews.push({
+        location: location,
+        floor: "ไม่ระบุ",
+        rating: comment.rating,
+        comment: comment.text,
+        date: comment.date,
+        rawDate: rawDate, // เก็บ Date object ไว้สำหรับเรียงลำดับ
+        imageUrl: comment.image || null
+      });
+    }
+  });
+});
 
-              allUserReviews.push({
-                location: location,
-                floor: "ไม่ระบุ",
-                rating: comment.rating,
-                comment: comment.text,
-                date: comment.date,
-                rawDate: rawDate, // เก็บ Date object ไว้สำหรับเรียงลำดับ
-                imageUrl: comment.image || null
-              });
-            }
-          });
-        });
+// เรียงลำดับรีวิวจากวันที่ล่าสุดไปเก่าสุด
+allUserReviews.sort((a, b) => b.rawDate - a.rawDate);
 
-        // เรียงลำดับรีวิวจากวันที่ล่าสุดไปเก่าสุด
-        allUserReviews.sort((a, b) => b.rawDate - a.rawDate);
-
-        setUserReviews(allUserReviews);
+setUserReviews(allUserReviews);
       } finally {
         setIsLoading(false)
       }
@@ -1830,8 +1879,9 @@ function UserProfile({
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser)
-        const fullName = `${parsedUser.first_name || ""} ${parsedUser.last_name || ""
-          }`.trim()
+        const fullName = `${parsedUser.first_name || ""} ${
+          parsedUser.last_name || ""
+        }`.trim()
         if (fullName) {
           setDisplayName(fullName)
           console.log("🔹 ดึงชื่อผู้ใช้จาก localStorage สำเร็จ:", fullName)
@@ -2115,10 +2165,10 @@ function AdminPanel({ onClose }) {
         rating: item.rating,
         comment: item.comment,
         date: item.review_date
-          ? formatDate(item.review_date)
-          : item.created_at
-            ? formatDate(item.created_at)
-            : "ไม่ระบุวันที่",
+        ? formatDate(item.review_date)
+        : item.created_at
+        ? formatDate(item.created_at)
+        : "ไม่ระบุวันที่",
         imageUrl: item.photo_url || null
       }))
 
@@ -2384,7 +2434,7 @@ function AdminPanel({ onClose }) {
                   style={{
                     fontSize: "14px",
                     color: "#666",
-                    marginRight: "30px"
+                    marginRight:"30px"
                   }}
                 >
                   {review.date}
@@ -2663,8 +2713,8 @@ function App() {
                 text: review.review.comment,
                 rating: review.review.rating,
                 date: review.review.review_date
-                  ? new Date(review.review.review_date).toLocaleDateString("th-TH")
-                  : new Date().toLocaleDateString("th-TH"),
+      ? new Date(review.review.review_date).toLocaleDateString("th-TH")
+      : new Date().toLocaleDateString("th-TH"),
                 image: reviewImage
               }
 
