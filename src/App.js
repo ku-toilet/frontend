@@ -12,8 +12,15 @@ import Slider from "react-slick"
 import "slick-carousel/slick/slick-theme.css"
 import "slick-carousel/slick/slick.css"
 import "./App.css"
+import L from "leaflet"
+import React from "react"
+
 
 const API_URL = "http://localhost:3001"
+
+
+
+
 
 const formatDate = (dateString) => {
   if (!dateString) return "ไม่ระบุวันที่";
@@ -87,6 +94,7 @@ const GPSMarker = ({ setUserPosition }) => {
   ) : null
 }
 
+//ปุ่มระบุตำแหน่งปัจจุบัน
 const ReCenterButton = ({ position }) => {
   const map = useMap()
 
@@ -119,6 +127,113 @@ const ReCenterButton = ({ position }) => {
     </button>
   )
 }
+
+//ปุ่มห้องน้ำใกล้ฉัน
+const RouteToNearestButton = ({
+  userPosition,
+  filteredRestrooms,
+  setSelectedMarker,
+  mapRef,
+  setRoutePolyline // ✅ เพิ่มตรงนี้
+}) => {
+  const map = useMap()
+
+  const handleRouteToNearest = async () => {
+    if (!userPosition || !filteredRestrooms.length) {
+      alert("ไม่พบตำแหน่งหรือข้อมูลห้องน้ำ")
+      return
+    }
+
+    const nearest = filteredRestrooms.reduce((nearestSoFar, restroom) => {
+      const dist = L.latLng(userPosition).distanceTo(L.latLng(restroom.geocode))
+      return dist < nearestSoFar.dist ? { ...restroom, dist } : nearestSoFar
+    }, { dist: Infinity })
+
+    const from = `${userPosition.lng},${userPosition.lat}`
+    const to = `${nearest.geocode[1]},${nearest.geocode[0]}`
+    const url = `https://router.project-osrm.org/route/v1/walking/${from};${to}?overview=full&geometries=geojson`
+
+    try {
+      const res = await fetch(url)
+      const data = await res.json()
+    
+      if (!data.routes?.length) {
+        alert("ไม่สามารถสร้างเส้นทางได้")
+        return
+      }
+    
+      const coords = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng])
+      const polyline = L.polyline(coords, { color: "blue" }).addTo(map)
+      map.fitBounds(polyline.getBounds())
+    
+      setRoutePolyline(polyline) // ✅ แทรกบรรทัดนี้เข้ามา
+    
+      if (setSelectedMarker) setSelectedMarker(nearest)
+    } catch (err) {
+      console.error("❌ Routing error:", err)
+      alert("เกิดข้อผิดพลาดในการวาดเส้นทาง")
+    }
+    
+  }
+
+  return (
+    <button
+      onClick={handleRouteToNearest}
+      style={{
+        position: "absolute",
+        bottom: "80px", // ขยับขึ้นจากปุ่ม 📍
+        right: "20px",
+        width: "50px",
+        height: "50px",
+        borderRadius: "50%",
+        border: "none",
+        backgroundColor: "white",
+        boxShadow: "0px 4px 10px rgba(0,0,0,0.3)",
+        cursor: "pointer"
+      }}
+      title="ไปยังห้องน้ำที่ใกล้ที่สุด"
+    >
+      🧭
+    </button>
+  )
+}
+
+//ปุ่มลบเส้นทาง
+const ClearRouteButton = ({ routePolyline, setRoutePolyline }) => {
+  const map = useMap()
+
+  const handleClearRoute = () => {
+    if (routePolyline) {
+      routePolyline.remove()       // ลบเส้นจากแผนที่
+      setRoutePolyline(null)       // เคลียร์ state
+      map.invalidateSize()         // รีเฟรชแผนที่
+    } else {
+      alert("ยังไม่มีเส้นทางบนแผนที่")
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClearRoute}
+      style={{
+        position: "absolute",
+        bottom: "130px", // สูงกว่าปุ่ม 🧭 และ 📍
+        right: "20px",
+        width: "50px",
+        height: "50px",
+        borderRadius: "50%",
+        border: "none",
+        backgroundColor: "white",
+        boxShadow: "0px 4px 10px rgba(0,0,0,0.3)",
+        cursor: "pointer"
+      }}
+      title="ลบเส้นทาง"
+    >
+      ❌
+    </button>
+  )
+}
+
 
 function HeaderBar({
   onFilterClick,
@@ -195,105 +310,255 @@ function HeaderBar({
 }
 
 function LoginPage({ onClose, onRegisterClick, onLogin }) {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = React.useState(null);
+  const [showPdpa, setShowPdpa] = React.useState(false);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user")
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser))
-      onLogin(JSON.parse(storedUser).name) // ✅ อัปเดตชื่อผู้ใช้ทันที
+      const parsed = JSON.parse(storedUser);
+      setUser(parsed);
+      onLogin(parsed.name);
     }
-  }, [])
+  }, []);
 
   const handleSuccess = (credentialResponse) => {
-    console.log("🔹 Google Login Success:", credentialResponse)
-
     fetch("http://localhost:3001/auth/google", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: credentialResponse.credential })
     })
-      .then((response) => response.json())
+      .then((res) => res.json())
       .then((data) => {
-        console.log("🔹 Server Response:", data) // ✅ ตรวจสอบค่าที่เซิร์ฟเวอร์ส่งกลับมา
-
         if (data.user) {
-          setUser(data.user)
-          localStorage.setItem("user", JSON.stringify(data.user))
-          onLogin(data.user.name) // ✅ อัปเดตชื่อผู้ใช้
+          setUser(data.user);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          onLogin(data.user.name);
         } else {
-          alert("Login failed!")
+          alert("Login failed!");
         }
       })
-      .catch((error) => console.error("🔴 Google Auth Error:", error))
-  }
+      .catch((err) => console.error("Google Auth Error:", err));
+  };
 
   const handleFailure = () => {
-    alert("Google login failed. Please try again.")
-  }
+    alert("Google login failed. Please try again.");
+  };
 
-  return (
-    <GoogleOAuthProvider clientId="577202715001-pa9pfkmbm44haiocpbpg4ran1rn4f824.apps.googleusercontent.com">
-      <div
-        style={{
+  return React.createElement(
+    GoogleOAuthProvider,
+    {
+      clientId: "577202715001-pa9pfkmbm44haiocpbpg4ran1rn4f824.apps.googleusercontent.com"
+    },
+    React.createElement(
+      "div",
+      {
+        style: {
           padding: "20px",
           maxWidth: "400px",
           margin: "100px auto",
           backgroundColor: "white",
           borderRadius: "10px",
-          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
           textAlign: "center"
-        }}
-      >
-        <h3 style={{ fontSize: 24, fontWeight: "bold", marginBottom: "16px" }}>
-          Login
-        </h3>
-
-        {!user ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              marginTop: "20px"
-            }}
-          >
-            <GoogleLogin
-              onSuccess={handleSuccess}
-              onError={handleFailure}
-              size="large"
-              width="250"
-            />
-          </div>
-        ) : (
-          <div style={{ marginTop: "20px" }}>
-            <h3>Logged in as:</h3>
-            <p>{user.name}</p>
-            <p>Email: {user.email}</p>
-            <button
-              onClick={() => {
-                googleLogout()
-                setUser(null)
-                localStorage.removeItem("user")
-              }}
-              style={{
-                padding: "10px 20px",
-                marginTop: "10px",
-                cursor: "pointer",
-                backgroundColor: "#d9534f",
-                color: "white",
-                border: "none",
-                borderRadius: "5px"
-              }}
-            >
-              Logout
-            </button>
-          </div>
-        )}
-      </div>
-    </GoogleOAuthProvider>
-  )
+        }
+      },
+      [
+        React.createElement(
+          "h3",
+          {
+            key: "login-title",
+            style: {
+              fontSize: 24,
+              fontWeight: "bold",
+              marginBottom: "16px"
+            }
+          },
+          "Login"
+        ),
+        !user
+          ? [
+              React.createElement(
+                "div",
+                {
+                  key: "google-login",
+                  style: {
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    marginTop: "20px"
+                  }
+                },
+                React.createElement(GoogleLogin, {
+                  onSuccess: handleSuccess,
+                  onError: handleFailure,
+                  size: "large",
+                  width: "250"
+                })
+              ),
+              React.createElement(
+                "div",
+                {
+                  key: "pdpa",
+                  style: {
+                    textAlign: "center",
+                    fontSize: "12px",
+                    color: "#555",
+                    marginTop: "10px"
+                  }
+                },
+                [
+                  "การเข้าสู่ระบบแสดงว่าคุณยินยอมให้เราเก็บและใช้ข้อมูลของคุณ ",
+                  React.createElement("br"),
+                  React.createElement(
+                    "button",
+                    {
+                      onClick: () => setShowPdpa(true),
+                      style: {
+                        background: "none",
+                        border: "none",
+                        color: "#006642",
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                        padding: 0
+                      }
+                    },
+                    "นโยบายความเป็นส่วนตัว"
+                  )
+                ]
+              )
+            ]
+          : React.createElement(
+              "div",
+              { key: "logged-in", style: { marginTop: "20px" } },
+              [
+                React.createElement("h3", { key: "as" }, "Logged in as:"),
+                React.createElement("p", { key: "name" }, user.name),
+                React.createElement("p", { key: "email" }, `Email: ${user.email}`),
+                React.createElement(
+                  "button",
+                  {
+                    key: "logout",
+                    onClick: () => {
+                      googleLogout();
+                      setUser(null);
+                      localStorage.removeItem("user");
+                    },
+                    style: {
+                      padding: "10px 20px",
+                      marginTop: "10px",
+                      cursor: "pointer",
+                      backgroundColor: "#d9534f",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "5px"
+                    }
+                  },
+                  "Logout"
+                )
+              ]
+            ),
+        showPdpa &&
+          React.createElement(
+            "div",
+            {
+              key: "pdpa-modal-bg",
+              onClick: () => setShowPdpa(false),
+              style: {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                width: "100vw",
+                height: "100vh",
+                backgroundColor: "rgba(0,0,0,0.5)",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                zIndex: 2000
+              }
+            },
+            React.createElement(
+              "div",
+              {
+                onClick: (e) => e.stopPropagation(),
+                style: {
+                  background: "white",
+                  padding: "30px",
+                  borderRadius: "10px",
+                  maxWidth: "700px",
+                  maxHeight: "80vh",
+                  overflowY: "auto",
+                  boxShadow: "0px 4px 10px rgba(0,0,0,0.2)",
+                  textAlign: "left",
+                  lineHeight: 1.6,
+                  fontSize: "14px"
+                }
+              },
+              [
+                React.createElement("h2", { style: { color: "#006642" } }, "นโยบายความเป็นส่วนตัว (Privacy Policy)"),
+                React.createElement("p", {}, "ปรับปรุงล่าสุด: 22 เมษายน 2025"),
+                React.createElement("p", {}, "เราให้ความสำคัญกับความเป็นส่วนตัวของผู้ใช้งานแอปพลิเคชันนี้เป็นอย่างยิ่ง กรุณาอ่านนโยบายความเป็นส่วนตัวฉบับนี้อย่างละเอียดเพื่อทำความเข้าใจว่าข้อมูลใดบ้างที่เรารวบรวม ใช้อย่างไร และสิทธิ์ของคุณคืออะไร"),
+                React.createElement("h3", {}, "1. ข้อมูลที่เราเก็บรวบรวม"),
+                React.createElement("ul", {}, [
+                  React.createElement("li", {}, "ข้อมูลบัญชีผู้ใช้: เมื่อคุณเข้าสู่ระบบด้วย Google เราจะเก็บข้อมูลที่ Google ให้ เช่น ชื่อ อีเมล และรูปโปรไฟล์"),
+                  React.createElement("li", {}, "ข้อมูลตำแหน่งที่ตั้ง: หากคุณอนุญาต แอปจะใช้ตำแหน่งของคุณเพื่อแสดงห้องน้ำใกล้เคียง"),
+                  React.createElement("li", {}, "ความคิดเห็นและรีวิว: หากคุณแสดงความคิดเห็นหรือรีวิว เราจะเก็บข้อความ คะแนน รูปภาพ และวันที่ของการแสดงความคิดเห็น")
+                ]),
+                React.createElement("h3", {}, "2. วัตถุประสงค์ของการใช้ข้อมูล"),
+                React.createElement("ul", {}, [
+                  React.createElement("li", {}, "เพื่อปรับปรุงประสบการณ์ผู้ใช้งาน เช่น แสดงห้องน้ำใกล้คุณ"),
+                  React.createElement("li", {}, "เพื่อจัดเก็บและแสดงรีวิวจากผู้ใช้งานคนอื่น ๆ"),
+                  React.createElement("li", {}, "เพื่อการวิเคราะห์และปรับปรุงบริการของเราในอนาคต")
+                ]),
+                React.createElement("h3", {}, "3. การแบ่งปันข้อมูล"),
+                React.createElement("ul", {}, [
+                  React.createElement("li", {}, "เราไม่ขายหรือเผยแพร่ข้อมูลส่วนตัวของคุณแก่บุคคลภายนอก"),
+                  React.createElement("li", {}, "ข้อมูลบางส่วน (เช่น ชื่อผู้ใช้ รีวิว รูปภาพ) จะถูกแสดงต่อสาธารณะเมื่อคุณโพสต์")
+                ]),
+                React.createElement("h3", {}, "4. สิทธิ์ของผู้ใช้"),
+                React.createElement("ul", {}, [
+                  React.createElement("li", {}, "คุณสามารถขอเข้าถึง แก้ไข หรือลบข้อมูลส่วนตัวของคุณได้โดยติดต่อเรา"),
+                  React.createElement("li", {}, "คุณสามารถเพิกถอนการยินยอมในการใช้ตำแหน่งที่ตั้งได้จากเบราว์เซอร์หรืออุปกรณ์ของคุณ")
+                ]),
+                React.createElement("h3", {}, "5. ความปลอดภัยของข้อมูล"),
+                React.createElement("ul", {}, [
+                  React.createElement("li", {}, "เรามีมาตรการรักษาความปลอดภัยเพื่อป้องกันการเข้าถึงโดยไม่ได้รับอนุญาต"),
+                  React.createElement("li", {}, "ข้อมูลสำคัญถูกจัดเก็บอย่างปลอดภัยและเข้ารหัสตามมาตรฐานอุตสาหกรรม")
+                ]),
+                React.createElement("h3", {}, "6. การเปลี่ยนแปลงนโยบาย"),
+                React.createElement("p", {}, "เราอาจปรับปรุงนโยบายนี้เป็นครั้งคราว หากมีการเปลี่ยนแปลงสำคัญจะแจ้งให้ทราบผ่านแอปหรือเว็บไซต์"),
+                React.createElement("h3", {}, "7. ช่องทางติดต่อ"),
+                React.createElement("p", {}, "หากคุณมีคำถามหรือข้อกังวลใด ๆ เกี่ยวกับนโยบายความเป็นส่วนตัวนี้ กรุณาติดต่อเราได้ที่:"),
+                React.createElement("p", {}, "อีเมล: pakapol.sar@ku.th"),
+                React.createElement(
+                  "div",
+                  { style: { textAlign: "center", marginTop: "20px" } },
+                  React.createElement(
+                    "button",
+                    {
+                      onClick: () => setShowPdpa(false),
+                      style: {
+                        padding: "10px 20px",
+                        backgroundColor: "#006642",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer"
+                      }
+                    },
+                    "ปิด"
+                  )
+                )
+              ]
+            )
+          )
+      ]
+    )
+  );
 }
+
+
+
 
 function SignUpPage({ onClose, onLoginClick }) {
   return (
@@ -2587,6 +2852,8 @@ function App() {
   const [filteredRestrooms, setFilteredRestrooms] = useState([])
   const [restrooms, setRestrooms] = useState([])
   const mapRef = useRef(null)
+  const [routePolyline, setRoutePolyline] = useState(null)
+
 
   const [filters, setFilters] = useState({
     women: false,
@@ -2621,6 +2888,23 @@ function App() {
   useEffect(() => {
     applyFilters()
   }, [searchText, filters, restrooms])
+
+  //ขยับแผนที่ไปที่markerที่ค้นหา
+
+  useEffect(() => {
+    applyFilters()
+  }, [searchText, filters, restrooms])
+  
+  // ✅ เพิ่มตรงนี้ได้เลย
+  useEffect(() => {
+    if (searchText && filteredRestrooms.length > 0 && mapRef.current) {
+      const firstMatch = filteredRestrooms[0]
+      mapRef.current.setView(firstMatch.geocode, 18, { animate: true })
+      console.log("📍 Centered to:", firstMatch.name)
+  
+    }
+  }, [searchText])
+  
 
   useEffect(() => {
     setFilteredRestrooms(restrooms) // ✅ ตั้งค่าข้อมูลที่ถูกกรองให้เป็นข้อมูลทั้งหมดก่อน
@@ -2882,6 +3166,45 @@ function App() {
     }, 100) // ใช้ setTimeout เพื่อให้การเปลี่ยนสถานะมีเวลาอัปเดตก่อน
   }
 
+  const drawRouteToMarker = async (targetCoords) => {
+    if (!userPosition) {
+      alert("ไม่พบตำแหน่งของคุณ")
+      return
+    }
+  
+    // ✅ ลบเส้นทางเดิมก่อนวาดใหม่
+    if (routePolyline) {
+      routePolyline.remove()
+      setRoutePolyline(null)
+    }
+  
+    const from = `${userPosition.lng},${userPosition.lat}`
+    const to = `${targetCoords[1]},${targetCoords[0]}`
+    const url = `https://router.project-osrm.org/route/v1/walking/${from};${to}?overview=full&geometries=geojson`
+  
+    try {
+      const res = await fetch(url)
+      const data = await res.json()
+  
+      if (!data.routes?.length) {
+        alert("ไม่สามารถสร้างเส้นทางได้")
+        return
+      }
+  
+      const coords = data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng])
+      const polyline = L.polyline(coords, { color: "blue" }).addTo(mapRef.current)
+      mapRef.current.fitBounds(polyline.getBounds())
+  
+      setRoutePolyline(polyline) // ✅ เก็บไว้ใช้ลบภายหลัง
+    } catch (err) {
+      console.error("❌ Routing error:", err)
+      alert("เกิดข้อผิดพลาดในการวาดเส้นทาง")
+    }
+  }
+  
+  
+  
+
   return (
     <GoogleOAuthProvider clientId="577202715001-pa9pfkmbm44haiocpbpg4ran1rn4f824.apps.googleusercontent.com">
       <div>
@@ -2964,24 +3287,58 @@ function App() {
                 <Popup>
                   <h3>{marker.name}</h3>
                   <p>ชั้น: {marker.floor}</p>
+                  <button
+                    onClick={() => {
+                      drawRouteToMarker(marker.geocode)
+                      mapRef.current.closePopup() // ✅ ปิด popup ด้วย
+                    }}
+                    style={{
+                      padding: "5px 10px",
+                      marginTop: "10px",
+                      backgroundColor: "#006642",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "5px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    🧭 เส้นทางมาที่นี่
+                  </button>
                 </Popup>
               </Marker>
             ))}
           </MarkerClusterGroup>
-
           {/* MapController to get reference to the map */}
           <MapController />
 
-          <div
-            style={{
-              position: "absolute",
-              bottom: "60px",
-              right: "20px",
-              zIndex: 1000
-            }}
-          >
+          {/* ❌ ปุ่ม Clear เส้นทาง */}
+          <div style={{ position: "absolute", bottom: "80px", right: "20px", zIndex: 1000 }}>
+            <ClearRouteButton
+              routePolyline={routePolyline}
+              setRoutePolyline={setRoutePolyline}
+            />
+          </div>
+
+
+
+          {/* 🧭 ปุ่มนำทางไปยังห้องน้ำที่ใกล้ที่สุด */}
+          <div style={{ position: "absolute", bottom: "70px", right: "20px", zIndex: 1000 }}>
+            <RouteToNearestButton
+              userPosition={userPosition}
+              filteredRestrooms={filteredRestrooms}
+              setSelectedMarker={setSelectedMarker}
+              mapRef={mapRef}
+              routePolyline={routePolyline}           // ✅ ส่ง polyline เดิมเข้าไป
+              setRoutePolyline={setRoutePolyline}     // ✅ ส่งฟังก์ชันสำหรับตั้งค่า
+            />
+          </div>
+
+
+          {/* ปุ่ม ReCenter (📍) อยู่ล่าง */}
+          <div style={{ position: "absolute", bottom: "70px", right: "20px", zIndex: 1000 }}>
             <ReCenterButton position={userPosition} />
           </div>
+          
         </MapContainer>
         {selectedMarker && (
           <div
@@ -3072,5 +3429,7 @@ const profileButtonStyle = {
   width: "80%",
   cursor: "pointer"
 }
+
+
 
 export default App
